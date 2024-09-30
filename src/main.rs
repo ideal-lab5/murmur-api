@@ -18,7 +18,6 @@
 extern crate rocket;
 
 use bcrypt::hash_with_salt;
-use murmur::etf::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use murmur::etf::runtime_types::node_template_runtime::RuntimeCall;
 use murmur::MurmurStore;
 use rocket::http::Status;
