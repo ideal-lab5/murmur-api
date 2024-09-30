@@ -1,18 +1,35 @@
 #[macro_use]
 extern crate rocket;
 
+// mod mongo_db;
+
+use mongodb::bson::doc;
 use bcrypt::hash_with_salt;
 use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::json::Json;
+use rocket_db_pools::{Database, mongodb::Client, Connection};
 use serde::{Deserialize, Serialize};
 
 const SALT: &str = "your-server-side-secret-salt";
+
+// static mut DB: Option<MongoDbConnection> = None;
+
+#[derive(Database)]
+#[database("murmur")]
+struct Db(Client); 
 
 #[derive(Serialize, Deserialize)]
 struct LoginRequest {
 	username: String,
 	password: String,
+}
+
+#[get("/insert")]
+async fn insert(mut db: Connection<Db>) {
+	db.database("admin").run_command(doc! {"ping": 1}, None).await;
+	println!("Pinged your deployment. You successfully connected to MongoDB!");
+	// Db.database("admin")
 }
 
 #[post("/login", data = "<login_request>")]
@@ -62,6 +79,11 @@ fn derive_seed(password: &str, username: &str) -> String {
 }
 
 #[launch]
-fn rocket() -> _ {
-	rocket::build().mount("/", routes![login, create, execute])
+async fn rocket() -> _ {
+	// let connection = MongoDbConnection::new().await;
+	// match connection {
+	// 	Ok(c) => unsafe{db = Some(c)},
+	// 	Err(e) => println!("DB Connection Failed: {e:?}")
+	// }
+	rocket::build().mount("/", routes![login, create, execute, insert]).attach(Db::init())
 }
