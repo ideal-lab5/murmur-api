@@ -723,6 +723,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93f2635620bf0b9d4576eb7bb9a38a55df78bd1205d26fa994b25911a69f212f"
 dependencies = [
  "bitcoin_hashes 0.11.0",
+ "serde",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -1542,33 +1544,6 @@ dependencies = [
 name = "etf-crypto-primitives"
 version = "0.2.4"
 source = "git+https://github.com/ideal-lab5/etf-sdk/?branch=dev#e2b3615e0936c2cdd1ab8673e15208bef880b040"
-dependencies = [
- "aes-gcm",
- "ark-bls12-377",
- "ark-bls12-381",
- "ark-ec",
- "ark-ff",
- "ark-poly",
- "ark-serialize",
- "ark-std",
- "array-bytes",
- "chacha20poly1305",
- "generic-array",
- "parity-scale-codec",
- "rand_chacha",
- "scale-info",
- "serde",
- "serde_cbor",
- "serde_json",
- "sha2 0.10.8",
- "sha3",
- "w3f-bls",
-]
-
-[[package]]
-name = "etf-crypto-primitives"
-version = "0.2.4"
-source = "git+https://github.com/ideal-lab5/etf-sdk/?branch=tony/dev#159ed603ca8a31b7d2e5f4437c62411c4d1fd743"
 dependencies = [
  "aes-gcm",
  "ark-bls12-377",
@@ -2651,12 +2626,15 @@ dependencies = [
  "murmur-lib",
  "rocket",
  "serde",
+ "serde_cbor",
+ "serde_json",
+ "subxt",
+ "subxt-signer",
 ]
 
 [[package]]
 name = "murmur-core"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git?branch=dev#44e03dc6e1557418f1de24502ab8993ec7573dab"
 dependencies = [
  "ark-bls12-377",
  "ark-ff",
@@ -2673,12 +2651,12 @@ dependencies = [
  "sha3",
  "totp-rs",
  "w3f-bls",
+ "zeroize",
 ]
 
 [[package]]
 name = "murmur-lib"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git?branch=dev#44e03dc6e1557418f1de24502ab8993ec7573dab"
 dependencies = [
  "murmur-core",
  "sp-consensus-beefy-etf",
@@ -4305,14 +4283,10 @@ dependencies = [
 [[package]]
 name = "sp-consensus-beefy-etf"
 version = "13.0.0"
-source = "git+https://github.com/ideal-lab5/etf.git?branch=murmur#47eff7c36775c43674cbbadb25a8daef7c182d49"
+source = "git+https://github.com/ideal-lab5/pallets.git?branch=main#d9aa53506d59b350a23647a6c9b04e253955094d"
 dependencies = [
- "ark-serialize",
- "ark-std",
- "etf-crypto-primitives 0.2.4 (git+https://github.com/ideal-lab5/etf-sdk/?branch=tony/dev)",
  "lazy_static",
  "parity-scale-codec",
- "rand",
  "scale-info",
  "serde",
  "sp-api",
@@ -4324,7 +4298,6 @@ dependencies = [
  "sp-mmr-primitives",
  "sp-runtime",
  "strum",
- "w3f-bls",
 ]
 
 [[package]]
@@ -5007,6 +4980,29 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "subxt-signer"
+version = "0.35.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ccb59a38fe357fab55247756174435e8626b93929864e8a498635a15e779df8"
+dependencies = [
+ "bip39",
+ "cfg-if",
+ "derive_more",
+ "hex",
+ "hmac 0.12.1",
+ "parity-scale-codec",
+ "pbkdf2",
+ "regex",
+ "schnorrkel",
+ "secp256k1",
+ "secrecy",
+ "sha2 0.10.8",
+ "sp-crypto-hashing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subxt",
+ "zeroize",
 ]
 
 [[package]]
