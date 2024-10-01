@@ -81,7 +81,7 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<Strin
 		let (call, mmr_store) = murmur::create(
 			username.to_string(),
 			seed.to_string(),
-			EPHEM_MSK, // TODO: replace with an hkdf?
+			EPHEM_MSK, // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
 			schedule,
 			round_pubkey_bytes,
 		);
