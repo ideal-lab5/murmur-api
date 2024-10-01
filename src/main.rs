@@ -18,18 +18,21 @@
 extern crate rocket;
 
 use bcrypt::hash_with_salt;
-use murmur::etf::runtime_types::node_template_runtime::RuntimeCall;
-use murmur::MurmurStore;
+use murmur::{
+	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
+	BlockNumber, MurmurStore,
+};
 use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::json::Json;
-use rocket::{response::Responder, Request, Response};
 use serde::{Deserialize, Serialize};
+use sp_core::crypto::Ss58Codec;
 use std::fs::File;
-use std::io::Cursor;
+use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
 
 const SALT: &str = "your-server-side-secret-salt";
+const EPHEM_MSK: [u8; 32] = [1; 32];
 
 #[derive(Serialize, Deserialize)]
 struct LoginRequest {
@@ -37,100 +40,103 @@ struct LoginRequest {
 	password: String,
 }
 
-#[derive(Serialize)]
-pub struct Payload<CallData> {
-	pallet_name: String,
-	call_name: String,
-	call_data: CallData,
-}
+// #[derive(Serialize)]
+// pub struct Payload<CallData> {
+// 	pallet_name: String,
+// 	call_name: String,
+// 	call_data: CallData,
+// }
 
-// Implement the From trait for Payload to convert from TxPayload
-impl<C, D> From<murmur::TxPayload<C>> for Payload<D>
-where
-	// C: Clone,
-	D: for<'a> From<&'a C>,
-{
-	fn from(tx_payload: murmur::TxPayload<C>) -> Self {
-		Payload {
-			pallet_name: tx_payload.pallet_name().to_string(),
-			call_name: tx_payload.call_name().to_string(),
-			call_data: tx_payload.call_data().into(),
-		}
-	}
-}
+// // Implement the From trait for Payload to convert from TxPayload
+// impl<C, D> From<murmur::TxPayload<C>> for Payload<D>
+// where
+// 	D: for<'a> From<&'a C>,
+// {
+// 	fn from(tx_payload: murmur::TxPayload<C>) -> Self {
+// 		Payload {
+// 			pallet_name: tx_payload.pallet_name().to_string(),
+// 			call_name: tx_payload.call_name().to_string(),
+// 			call_data: tx_payload.call_data().into(),
+// 		}
+// 	}
+// }
 
-#[derive(Serialize, Clone)]
-struct Create {
-	root: Vec<u8>,
-	size: u64,
-	name: Vec<u8>,
-}
+// #[derive(Serialize, Clone)]
+// struct Create {
+// 	root: Vec<u8>,
+// 	size: u64,
+// 	name: Vec<u8>,
+// }
 
-impl<'a> From<&'a murmur::Create> for Create {
-	fn from(create: &'a murmur::Create) -> Self {
-		Create { root: create.root.clone(), size: create.size, name: create.name.0.clone() }
-	}
-}
+// impl<'a> From<&'a murmur::Create> for Create {
+// 	fn from(create: &'a murmur::Create) -> Self {
+// 		Create { root: create.root.clone(), size: create.size, name: create.name.0.clone() }
+// 	}
+// }
 
-#[derive(Serialize)]
-struct CreateResponse {
-	payload: Payload<Create>,
-	store: MurmurStore,
-}
+// #[derive(Serialize)]
+// struct CreateResponse {
+// 	payload: Payload<Create>,
+// 	store: MurmurStore,
+// }
 
-impl<'r> Responder<'r, 'static> for CreateResponse {
-	fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
-		let json_response =
-			serde_json::to_string(&self).map_err(|_| Status::InternalServerError)?;
-		Response::build()
-			.header(rocket::http::ContentType::JSON)
-			.sized_body(json_response.len(), Cursor::new(json_response))
-			.ok()
-	}
-}
+// impl<'r> Responder<'r, 'static> for CreateResponse {
+// 	fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+// 		let json_response =
+// 			serde_json::to_string(&self).map_err(|_| Status::InternalServerError)?;
+// 		Response::build()
+// 			.header(rocket::http::ContentType::JSON)
+// 			.sized_body(json_response.len(), Cursor::new(json_response))
+// 			.ok()
+// 	}
+// }
 
-#[derive(Serialize)]
-struct Proxy {
-	pub name: Vec<u8>,
-	pub position: u64,
-	pub hash: Vec<u8>,
-	pub ciphertext: Vec<u8>,
-	pub proof: Vec<Vec<u8>>,
-}
+// #[derive(Serialize)]
+// struct Proxy {
+// 	pub name: Vec<u8>,
+// 	pub position: u64,
+// 	pub hash: Vec<u8>,
+// 	pub ciphertext: Vec<u8>,
+// 	pub proof: Vec<Vec<u8>>,
+// }
 
-impl<'a> From<&'a murmur::Proxy> for Proxy {
-	fn from(proxy: &'a murmur::Proxy) -> Self {
-		Proxy {
-			name: proxy.name.0.clone(),
-			position: proxy.position,
-			hash: proxy.hash.clone(),
-			ciphertext: proxy.ciphertext.clone(),
-			proof: proxy.proof.clone(),
-		}
-	}
-}
+// impl<'a> From<&'a murmur::Proxy> for Proxy {
+// 	fn from(proxy: &'a murmur::Proxy) -> Self {
+// 		Proxy {
+// 			name: proxy.name.0.clone(),
+// 			position: proxy.position,
+// 			hash: proxy.hash.clone(),
+// 			ciphertext: proxy.ciphertext.clone(),
+// 			proof: proxy.proof.clone(),
+// 		}
+// 	}
+// }
 
-#[derive(Serialize)]
-struct ProxyResponse {
-	payload: Payload<Proxy>,
-}
+// #[derive(Serialize)]
+// struct ProxyResponse {
+// 	payload: Payload<Proxy>,
+// }
 
-impl<'r> Responder<'r, 'static> for ProxyResponse {
-	fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
-		let json_response =
-			serde_json::to_string(&self).map_err(|_| Status::InternalServerError)?;
-		Response::build()
-			.header(rocket::http::ContentType::JSON)
-			.sized_body(json_response.len(), Cursor::new(json_response))
-			.ok()
-	}
+// impl<'r> Responder<'r, 'static> for ProxyResponse {
+// 	fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+// 		let json_response =
+// 			serde_json::to_string(&self).map_err(|_| Status::InternalServerError)?;
+// 		Response::build()
+// 			.header(rocket::http::ContentType::JSON)
+// 			.sized_body(json_response.len(), Cursor::new(json_response))
+// 			.ok()
+// 	}
+// }
+
+#[derive(Deserialize)]
+struct ExecuteRequest {
+	amount: u128,
+	to: String,
 }
 
 #[derive(Deserialize)]
-struct PrepareExecuteRequest {
-	name: String,
-	seed: String,
-	amount: u128,
+struct NewRequest {
+	validity: u32,
 }
 
 #[post("/login", data = "<login_request>")]
@@ -145,54 +151,82 @@ async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'
 	"User logged in, session started."
 }
 
-#[post("/create")]
-async fn create(cookies: &CookieJar<'_>) -> Result<CreateResponse, Status> {
+#[post("/new", data = "<request>")]
+/// Generate a wallet valid for the next {validity} blocks
+async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<String, Status> {
 	check_cookie(cookies, |username, seed| async {
-		let (create_payload, store) = murmur::create(
+		let (client, current_block_number, round_pubkey_bytes) =
+			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+		// 1. prepare block schedule
+		let mut schedule: Vec<BlockNumber> = Vec::new();
+		for i in 2..request.validity + 2 {
+			// wallet is 'active' in 2 blocks
+			let next_block_number: BlockNumber = current_block_number + i;
+			schedule.push(next_block_number);
+		}
+		// 2. create mmr
+		let (call, mmr_store) = murmur::create(
 			username.to_string(),
 			seed.to_string(),
-			[1; 32],
-			vec![1, 2, 3],
-			vec![4, 5, 6, 7],
+			EPHEM_MSK, // TODO: replace with an hkdf?
+			schedule,
+			round_pubkey_bytes,
 		);
-		CreateResponse { payload: create_payload.into(), store }
+		// 3. add to storage
+		write_mmr_store(mmr_store.clone());
+		// sign and send the call
+		let from = dev::alice();
+		let _events = client
+			.tx()
+			.sign_and_submit_then_watch_default(&call, &from)
+			.await
+			.map_err(|_| Status::InternalServerError)?;
+		Ok("MMR proxy account creation successful!".to_string())
 	})
 	.await
-	.map_err(|_| Status::Forbidden)
 }
 
-#[post("/prepare_execute", data = "<request>")]
-async fn prepare_execute(
-	cookies: &CookieJar<'_>,
-	request: Json<PrepareExecuteRequest>,
-) -> Result<ProxyResponse, Status> {
-	check_cookie(cookies, |_username, _seed| async {
-		let request = request.into_inner();
-		let current_block_number = 1; // TODO: get from runtime
-		let bob = dev::bob().public_key();
-		let balance_transfer_call =
-			RuntimeCall::Balances(murmur::etf::balances::Call::transfer_allow_death {
-				dest: subxt::utils::MultiAddress::<_, u32>::from(bob),
-				value: request.amount,
-			});
-		let proxy_payload = murmur::prepare_execute(
-			request.name.into_bytes(),
-			request.seed.into_bytes(),
-			current_block_number,
-			load_mmr_store(),
+#[post("/execute", data = "<request>")]
+/// Execute a transaction from the wallet
+async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Result<String, Status> {
+	check_cookie(cookies, |username, seed| async {
+		let (client, current_block_number, _) =
+			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+
+		let from_ss58 = sp_core::crypto::AccountId32::from_ss58check(&request.to).unwrap();
+
+		let bytes: &[u8] = from_ss58.as_ref();
+		let from_ss58_sized: [u8; 32] = bytes.try_into().unwrap();
+		let to = AccountId32::from(from_ss58_sized);
+		let balance_transfer_call = Balances(Call::transfer_allow_death {
+			dest: MultiAddress::<_, u32>::from(to),
+			value: request.amount,
+		});
+
+		let store: MurmurStore = load_mmr_store();
+		let target_block_number: BlockNumber = current_block_number + 1;
+		println!("💾 Recovered Murmur store from local file");
+		let tx = murmur::prepare_execute(
+			username.to_string(),
+			seed.to_string(),
+			target_block_number,
+			store,
 			balance_transfer_call,
 		)
 		.await;
-		ProxyResponse { payload: proxy_payload.into() }
+
+		// submit the tx using alice to sign it
+		let _ = client.tx().sign_and_submit_then_watch_default(&tx, &dev::alice()).await;
+
+		Ok("Transaction executed".to_string())
 	})
 	.await
-	.map_err(|_| Status::Forbidden)
 }
 
-async fn check_cookie<'a, F, Fut, R>(cookies: &'a CookieJar<'_>, callback: F) -> Result<R, ()>
+async fn check_cookie<'a, F, Fut, R>(cookies: &'a CookieJar<'_>, callback: F) -> Result<R, Status>
 where
 	F: FnOnce(&'a str, &'a str) -> Fut,
-	Fut: std::future::Future<Output = R>,
+	Fut: std::future::Future<Output = Result<R, Status>>,
 {
 	let username = cookies.get("username");
 	let seed = cookies.get("seed");
@@ -200,9 +234,9 @@ where
 		(Some(username_cookie), Some(seed_cookie)) => {
 			let username = username_cookie.value();
 			let seed = seed_cookie.value();
-			Ok(callback(username, seed).await)
+			callback(username, seed).await
 		},
-		_ => Err(()),
+		_ => Err(Status::Forbidden),
 	}
 }
 
@@ -219,8 +253,14 @@ fn load_mmr_store() -> MurmurStore {
 
 	data
 }
+/// Write the MMR data to a file
+fn write_mmr_store(mmr_store: MurmurStore) {
+	// TODO: write to DB
+	let mmr_store_file = File::create("mmr_store").expect("It should create the file");
+	serde_cbor::to_writer(mmr_store_file, &mmr_store).unwrap();
+}
 
 #[launch]
 fn rocket() -> _ {
-	rocket::build().mount("/", routes![login, create, prepare_execute])
+	rocket::build().mount("/", routes![login, new, execute])
 }

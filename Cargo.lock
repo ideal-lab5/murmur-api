@@ -2628,6 +2628,7 @@ dependencies = [
  "serde",
  "serde_cbor",
  "serde_json",
+ "sp-core",
  "subxt",
  "subxt-signer",
 ]
@@ -2635,7 +2636,6 @@ dependencies = [
 [[package]]
 name = "murmur-core"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git?branch=feat/3-murmur-api-create-functions-that-interact-with-murmur-core#6d7431533f4c313180664fa97a8d0ea1613c2be6"
 dependencies = [
  "ark-bls12-377",
  "ark-ff",
@@ -2658,7 +2658,6 @@ dependencies = [
 [[package]]
 name = "murmur-lib"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git?branch=feat/3-murmur-api-create-functions-that-interact-with-murmur-core#6d7431533f4c313180664fa97a8d0ea1613c2be6"
 dependencies = [
  "murmur-core",
  "sp-consensus-beefy-etf",

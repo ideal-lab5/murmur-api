@@ -13,10 +13,11 @@ rocket = { version = "0.5.1", features = ["tls", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bcrypt = "0.10.1"
-murmur = { package = "murmur-lib", git = "https://github.com/ideal-lab5/murmur.git", branch = "feat/3-murmur-api-create-functions-that-interact-with-murmur-core"}
-# murmur = { path = "../murmur/lib", package = "murmur-lib" }
+# murmur = { package = "murmur-lib", git = "https://github.com/ideal-lab5/murmur.git", branch = "feat/3-murmur-api-create-functions-that-interact-with-murmur-core"}
+murmur = { path = "../murmur/lib", package = "murmur-lib" }
 # frame-support = "4.0.0"
 # w3f-bls = "0.1.3"
 serde_cbor = "0.11.2"
+sp-core = { git = "https://github.com/ideal-lab5/polkadot-sdk.git", branch = "testing", features = ["bls-experimental"] }
 subxt-signer = "0.35.2"
 subxt = "0.35.2"
