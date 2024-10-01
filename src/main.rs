@@ -9,7 +9,7 @@ extern crate rocket;
 use std::result;
 
 // use mongodb::{bson::{doc, Document}, results::DeleteResult, error::Error};
-use rocket_db_pools::mongodb::{bson::{self, doc, Bson, Document}, error::Error, results::DeleteResult, Collection};
+use rocket_db_pools::mongodb::{bson::{self, doc, oid::ObjectId, Bson, Document}, error::Error, results::DeleteResult, Collection};
 
 use bcrypt::hash_with_salt;
 use rocket::{futures::FutureExt, http::Status};
@@ -69,9 +69,16 @@ async fn delete(db: Connection<Db>) {
 
 			let collection: Collection<MMR> = db.database("Mmr").collection("mmrs");
 
+			// Can delete by reconstructing the object or by using the object ID that is 
+			// created on record insertion
 			let query = bson_object.as_document().unwrap();
-		
+			// let object_id = ObjectId::parse_str("66fc1dc432627ab776148773").unwrap();
+			// let query = doc!{"_id": object_id};
+			
+
 			let delete_result = collection.delete_one(query.clone(), None).await;
+		
+			// let delete_result = collection.delete_one(query.clone(), None).await;
 			match delete_result {
 					Err(e) => println!("Deletion error occurred: {e:?}"),
 					Ok(success) => println!("Deletion Succeeded {success:?}")
