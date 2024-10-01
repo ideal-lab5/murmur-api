@@ -79,12 +79,13 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<Strin
 		}
 		// 2. create mmr
 		let (call, mmr_store) = murmur::create(
-			username.to_string(),
-			seed.to_string(),
+			username.into(),
+			seed.into(),
 			EPHEM_MSK, // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
 			schedule,
 			round_pubkey_bytes,
-		);
+		)
+		.map_err(|_| Status::InternalServerError)?;
 		// 3. add to storage
 		store::write(mmr_store.clone());
 		// sign and send the call
@@ -120,13 +121,13 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Resu
 		let target_block_number = current_block_number + 1;
 
 		let tx = murmur::prepare_execute(
-			username.to_string(),
-			seed.to_string(),
+			username.into(),
+			seed.into(),
 			target_block_number,
 			store,
 			balance_transfer_call,
 		)
-		.await;
+		.map_err(|_| Status::InternalServerError)?;
 
 		// submit the tx using alice to sign it
 		let _ = client.tx().sign_and_submit_then_watch_default(&tx, &dev::alice()).await;
