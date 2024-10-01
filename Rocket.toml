@@ -1,0 +1,2 @@
+[default.databases.murmur]
+url = "mongodb+srv://murmurapi:murmur_api@murmur.shic7.mongodb.net/?retryWrites=true&w=majority&appName=Murmur"

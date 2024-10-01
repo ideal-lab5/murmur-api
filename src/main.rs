@@ -2,10 +2,17 @@
 extern crate rocket;
 
 // mod mongo_db;
+// #[macro_use]
+// extern crate bson;
 
-use mongodb::bson::doc;
+
+use std::result;
+
+// use mongodb::{bson::{doc, Document}, results::DeleteResult, error::Error};
+use rocket_db_pools::mongodb::{bson::{self, doc, Bson, Document}, error::Error, results::DeleteResult, Collection};
+
 use bcrypt::hash_with_salt;
-use rocket::http::Status;
+use rocket::{futures::FutureExt, http::Status};
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::json::Json;
 use rocket_db_pools::{Database, mongodb::Client, Connection};
@@ -24,12 +31,53 @@ struct LoginRequest {
 	username: String,
 	password: String,
 }
+#[derive(Serialize, Deserialize)]
+struct MMR {
+	test: String,
+	test2: String
+}
 
 #[get("/insert")]
-async fn insert(mut db: Connection<Db>) {
-	db.database("admin").run_command(doc! {"ping": 1}, None).await;
-	println!("Pinged your deployment. You successfully connected to MongoDB!");
+async fn insert(db: Connection<Db>) {
+	// db.database("admin").run_command(doc! {"ping": 1}, None).await;
+	let test = String::from("abc");
+	let test2 = String::from("cde");
+	let doc = MMR{test, test2};
+	let insert_result = db.database("Mmr").collection("mmrs").insert_one(doc, None).await;
+
+	match insert_result {
+		Err(e) => println!("Error inserting record : {e:?}"),
+		Ok(insert) => {
+			println!("succesfully inserted record, {insert:?}");
+		}
+	}
+	// println!("Pinged your deployment. You successfully connected to MongoDB!");
 	// Db.database("admin")
+}
+
+#[get("/delete")]
+async fn delete(db: Connection<Db>) {
+
+	let test = String::from("abc");
+	let test2 = String::from("cde");
+	let object = MMR{test, test2};
+
+	let bson_try = bson::to_bson(&object);
+	match bson_try {
+		Err(e) => println!("Error turning object into bson {e:?}"),
+		Ok(bson_object) => {
+
+			let collection: Collection<MMR> = db.database("Mmr").collection("mmrs");
+
+			let query = bson_object.as_document().unwrap();
+		
+			let delete_result = collection.delete_one(query.clone(), None).await;
+			match delete_result {
+					Err(e) => println!("Deletion error occurred: {e:?}"),
+					Ok(success) => println!("Deletion Succeeded {success:?}")
+				}
+		}
+	}
 }
 
 #[post("/login", data = "<login_request>")]
@@ -85,5 +133,5 @@ async fn rocket() -> _ {
 	// 	Ok(c) => unsafe{db = Some(c)},
 	// 	Err(e) => println!("DB Connection Failed: {e:?}")
 	// }
-	rocket::build().mount("/", routes![login, create, execute, insert]).attach(Db::init())
+	rocket::build().mount("/", routes![login, create, execute, insert, delete]).attach(Db::init())
 }

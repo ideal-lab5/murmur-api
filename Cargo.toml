@@ -11,8 +11,6 @@ license = "MIT-0"
 rocket = { version = "0.5.1", features = ["tls", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 bcrypt = "0.10.1"
-mongodb = "3.1.0"
-tokio= "1.40.0"
 
 [dependencies.rocket_db_pools]
 version = "0.2.0"
