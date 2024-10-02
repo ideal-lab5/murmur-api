@@ -25,11 +25,11 @@ use murmur::{
 	BlockNumber, MurmurStore,
 };
 use rocket_db_pools::{Connection, Database};
-use rocket_db_pools::mongodb::{Client, Collection};
-use rocket_db_pools::mongodb::bson::{self, doc};
+use rocket_db_pools::mongodb::Client;
+use rocket_db_pools::mongodb::bson::doc;
 use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
-use rocket::serde::{json::Json, Serialize, Deserialize};
+use rocket::serde::{json::Json, Deserialize};
 use sp_core::crypto::Ss58Codec;
 use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
@@ -37,7 +37,7 @@ use utils::{check_cookie, derive_seed};
 
 const SALT: &str = "your-server-side-secret-salt";
 const EPHEM_MSK: [u8; 32] = [1; 32];
-const USE_DB: bool = false;
+const USE_DB: bool = true;
 const DB_NAME: &str = "MurmurDB";
 const COLLECTION_NAME: &str = "mmrs";
 
@@ -49,58 +49,6 @@ struct Db(Client);
 struct LoginRequest {
 	username: String,
 	password: String,
-}
-#[derive(Serialize, Deserialize)]
-struct MMR {
-	test: String,
-	test2: String
-}
-
-#[get("/insert")]
-async fn insert(db: Connection<Db>) {
-	let test = String::from("abc");
-	let test2 = String::from("cde");
-	let doc = MMR{test, test2};
-	let insert_result = db.database("MurmurDB").collection("mmrs").insert_one(doc, None).await;
-
-	match insert_result {
-		Err(e) => println!("Error inserting record : {e:?}"),
-		Ok(insert) => {
-			println!("succesfully inserted record, {insert:?}");
-		}
-	}
-}
-
-#[get("/delete")]
-async fn delete(db: Connection<Db>) {
-
-	let test = String::from("abc");
-	let test2 = String::from("cde");
-	let object = MMR{test, test2};
-
-	let bson_try = bson::to_bson(&object);
-	match bson_try {
-		Err(e) => println!("Error turning object into bson {e:?}"),
-		Ok(bson_object) => {
-
-			let collection: Collection<MMR> = db.database("MurmurDB").collection("mmrs");
-
-			// Can delete by reconstructing the object or by using the object ID that is 
-			// created on record insertion
-			let query = bson_object.as_document().unwrap();
-			// let object_id = ObjectId::parse_str("66fc1dc432627ab776148773").unwrap();
-			// let query = doc!{"_id": object_id};
-			
-
-			let delete_result = collection.delete_one(query.clone(), None).await;
-		
-			// let delete_result = collection.delete_one(query.clone(), None).await;
-			match delete_result {
-					Err(e) => println!("Deletion error occurred: {e:?}"),
-					Ok(success) => println!("Deletion Succeeded {success:?}")
-				}
-		}
-	}
 }
 
 #[derive(Deserialize)]
@@ -214,5 +162,5 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>, db: Con
 
 #[launch]
 fn rocket() -> _ {
-	rocket::build().mount("/", routes![login, new, execute, insert, delete]).attach(Db::init())
+	rocket::build().mount("/", routes![login, new, execute]).attach(Db::init())
 }
