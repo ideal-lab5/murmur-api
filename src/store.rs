@@ -20,10 +20,8 @@ use std::fs::File;
 
 use rocket_db_pools::Connection;
 use rocket_db_pools::mongodb::Collection;
-use rocket_db_pools::mongodb::Cursor;
-use rocket_db_pools::mongodb::error::Error;
 use rocket_db_pools::mongodb::bson::oid::ObjectId;
-use rocket::serde::Serialize;
+use rocket::{futures::TryStreamExt, serde::Serialize};
 
 use crate::Db;
 
@@ -35,7 +33,7 @@ pub(crate) fn load_from_file() -> MurmurStore {
 	data
 }
 
-pub(crate) async fn load_from_db(object_id_string: String, db_name: String, collection_name: String, db:Connection<Db>, options: Option<FindOptions>) -> Result<Cursor<MurmurStore>, Error> {
+pub(crate) async fn load_from_db(object_id_string: String, db_name: &str, collection_name: &str, db:Connection<Db>, options: Option<FindOptions>) -> MurmurStore {
 
 	let object_id = ObjectId::parse_str(object_id_string).unwrap();
 
@@ -43,9 +41,11 @@ pub(crate) async fn load_from_db(object_id_string: String, db_name: String, coll
 
 	let mmr_collection: Collection<MurmurStore>= db.database(&db_name).collection(&collection_name);
 
-	let mmr_query_result = mmr_collection.find(filter, options).await;
+	let cursor = mmr_collection.find(filter, options).await?;
 
-	mmr_query_result
+	let mmr = cursor.try_next().await.unwrap().unwrap();
+
+	mmr
 
 }
 
@@ -56,9 +56,9 @@ pub(crate) fn write_to_file(mmr_store: MurmurStore) {
 	serde_cbor::to_writer(mmr_store_file, &mmr_store).unwrap();
 }
 
-pub (crate) async fn write_to_db<T:Serialize>(db_name: String, collection_name: String, doc: T, db:Connection<Db>, options: Option<InsertOneOptions>) {
+pub (crate) async fn write_to_db<T:Serialize>(db_name: &str, collection_name: &str, doc: T, db:Connection<Db>, options: Option<InsertOneOptions>) {
 
-	let insert_result = db.database(&db_name).collection(&collection_name).insert_one(doc, options).await;
+	let insert_result = db.database(db_name).collection(collection_name).insert_one(doc, options).await;
 
 	match insert_result {
 		Err(e) => println!("Error inserting record : {e:?}"),

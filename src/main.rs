@@ -22,11 +22,11 @@ mod utils;
 
 use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
-	BlockNumber,
+	BlockNumber, MurmurStore,
 };
 use rocket_db_pools::{Database, Connection};
-use rocket_db_pools::mongodb::{error::Error, results::DeleteResult, Client, Collection};
-use rocket_db_pools::mongodb::bson::{self, doc, oid::ObjectId, Bson, Document};
+use rocket_db_pools::mongodb::{Client, Collection};
+use rocket_db_pools::mongodb::bson::{self, doc};
 use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::{json::Json, Serialize, Deserialize};
@@ -37,6 +37,9 @@ use utils::{check_cookie, derive_seed};
 
 const SALT: &str = "your-server-side-secret-salt";
 const EPHEM_MSK: [u8; 32] = [1; 32];
+const use_db: bool = false;
+const db_name: &str = "MurmurDB";
+const collection_name: &str = "mmrs";
 
 #[derive(Database)]
 #[database("Murmur")]
@@ -146,7 +149,12 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>, db: Connection<
 		)
 		.map_err(|_| Status::InternalServerError)?;
 		// 3. add to storage
-		store::write_to_file(mmr_store.clone());
+		if use_db {
+			store::write_to_db(db_name, collection_name, mmr_store.clone(), db, None).await;
+		} else {
+			store::write_to_file(mmr_store.clone());
+		}
+		
 		// sign and send the call
 		let from = dev::alice();
 		let _events = client
@@ -161,7 +169,7 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>, db: Connection<
 
 #[post("/execute", data = "<request>")]
 /// Execute a transaction from the wallet
-async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Result<String, Status> {
+async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>, db: Connection<Db>) -> Result<String, Status> {
 	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, _) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
@@ -176,7 +184,14 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Resu
 			value: request.amount,
 		});
 
-		let store = store::load_from_file();
+		let store: MurmurStore;
+		if use_db {
+			let object_id_string = "str".to_string();
+			store = store::load_from_db(object_id_string, db_name, collection_name, db, None).await;
+		} else {
+			store = store::load_from_file();
+		}
+		
 		let target_block_number = current_block_number + 1;
 
 		let tx = murmur::prepare_execute(
