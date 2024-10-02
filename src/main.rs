@@ -24,9 +24,12 @@ use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
 	BlockNumber,
 };
+use rocket_db_pools::{Database, Connection};
+use rocket_db_pools::mongodb::{error::Error, results::DeleteResult, Client, Collection};
+use rocket_db_pools::mongodb::bson::{self, doc, oid::ObjectId, Bson, Document};
 use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
-use rocket::serde::{json::Json, Deserialize};
+use rocket::serde::{json::Json, Serialize, Deserialize};
 use sp_core::crypto::Ss58Codec;
 use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
@@ -34,6 +37,10 @@ use utils::{check_cookie, derive_seed};
 
 const SALT: &str = "your-server-side-secret-salt";
 const EPHEM_MSK: [u8; 32] = [1; 32];
+
+#[derive(Database)]
+#[database("Murmur")]
+struct Db(Client); 
 
 #[derive(Deserialize)]
 struct LoginRequest {
@@ -46,55 +53,52 @@ struct MMR {
 	test2: String
 }
 
-// #[get("/insert")]
-// async fn insert(db: Connection<Db>) {
-// 	// db.database("admin").run_command(doc! {"ping": 1}, None).await;
-// 	let test = String::from("abc");
-// 	let test2 = String::from("cde");
-// 	let doc = MMR{test, test2};
-// 	let insert_result = db.database("Mmr").collection("mmrs").insert_one(doc, None).await;
+#[get("/insert")]
+async fn insert(db: Connection<Db>) {
+	let test = String::from("abc");
+	let test2 = String::from("cde");
+	let doc = MMR{test, test2};
+	let insert_result = db.database("MurmurDB").collection("mmrs").insert_one(doc, None).await;
 
-// 	match insert_result {
-// 		Err(e) => println!("Error inserting record : {e:?}"),
-// 		Ok(insert) => {
-// 			println!("succesfully inserted record, {insert:?}");
-// 		}
-// 	}
-// 	// println!("Pinged your deployment. You successfully connected to MongoDB!");
-// 	// Db.database("admin")
-// }
+	match insert_result {
+		Err(e) => println!("Error inserting record : {e:?}"),
+		Ok(insert) => {
+			println!("succesfully inserted record, {insert:?}");
+		}
+	}
+}
 
-// #[get("/delete")]
-// async fn delete(db: Connection<Db>) {
+#[get("/delete")]
+async fn delete(db: Connection<Db>) {
 
-// 	let test = String::from("abc");
-// 	let test2 = String::from("cde");
-// 	let object = MMR{test, test2};
+	let test = String::from("abc");
+	let test2 = String::from("cde");
+	let object = MMR{test, test2};
 
-// 	let bson_try = bson::to_bson(&object);
-// 	match bson_try {
-// 		Err(e) => println!("Error turning object into bson {e:?}"),
-// 		Ok(bson_object) => {
+	let bson_try = bson::to_bson(&object);
+	match bson_try {
+		Err(e) => println!("Error turning object into bson {e:?}"),
+		Ok(bson_object) => {
 
-// 			let collection: Collection<MMR> = db.database("Mmr").collection("mmrs");
+			let collection: Collection<MMR> = db.database("MurmurDB").collection("mmrs");
 
-// 			// Can delete by reconstructing the object or by using the object ID that is 
-// 			// created on record insertion
-// 			let query = bson_object.as_document().unwrap();
-// 			// let object_id = ObjectId::parse_str("66fc1dc432627ab776148773").unwrap();
-// 			// let query = doc!{"_id": object_id};
+			// Can delete by reconstructing the object or by using the object ID that is 
+			// created on record insertion
+			let query = bson_object.as_document().unwrap();
+			// let object_id = ObjectId::parse_str("66fc1dc432627ab776148773").unwrap();
+			// let query = doc!{"_id": object_id};
 			
 
-// 			let delete_result = collection.delete_one(query.clone(), None).await;
+			let delete_result = collection.delete_one(query.clone(), None).await;
 		
-// 			// let delete_result = collection.delete_one(query.clone(), None).await;
-// 			match delete_result {
-// 					Err(e) => println!("Deletion error occurred: {e:?}"),
-// 					Ok(success) => println!("Deletion Succeeded {success:?}")
-// 				}
-// 		}
-// 	}
-// }
+			// let delete_result = collection.delete_one(query.clone(), None).await;
+			match delete_result {
+					Err(e) => println!("Deletion error occurred: {e:?}"),
+					Ok(success) => println!("Deletion Succeeded {success:?}")
+				}
+		}
+	}
+}
 
 #[derive(Deserialize)]
 struct ExecuteRequest {
@@ -121,7 +125,7 @@ async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'
 
 #[post("/new", data = "<request>")]
 /// Generate a wallet valid for the next {validity} blocks
-async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<String, Status> {
+async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>, db: Connection<Db>) -> Result<String, Status> {
 	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, round_pubkey_bytes) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
@@ -142,7 +146,7 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<Strin
 		)
 		.map_err(|_| Status::InternalServerError)?;
 		// 3. add to storage
-		store::write(mmr_store.clone());
+		store::write_to_file(mmr_store.clone());
 		// sign and send the call
 		let from = dev::alice();
 		let _events = client
@@ -172,7 +176,7 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Resu
 			value: request.amount,
 		});
 
-		let store = store::load();
+		let store = store::load_from_file();
 		let target_block_number = current_block_number + 1;
 
 		let tx = murmur::prepare_execute(
@@ -194,5 +198,5 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Resu
 
 #[launch]
 fn rocket() -> _ {
-	rocket::build().mount("/", routes![login, new, execute])
+	rocket::build().mount("/", routes![login, new, execute, insert, delete]).attach(Db::init())
 }

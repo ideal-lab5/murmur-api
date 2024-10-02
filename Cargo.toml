@@ -17,3 +17,7 @@ serde_cbor = "0.11.2"
 sp-core = { git = "https://github.com/ideal-lab5/polkadot-sdk.git", branch = "testing", features = ["bls-experimental"] }
 subxt-signer = "0.35.2"
 subxt = "0.35.2"
+
+[dependencies.rocket_db_pools]
+version = "0.2.0"
+features = ["mongodb"]
