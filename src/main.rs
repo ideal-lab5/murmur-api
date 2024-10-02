@@ -24,7 +24,7 @@ use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
 	BlockNumber, MurmurStore,
 };
-use rocket_db_pools::{Database, Connection};
+use rocket_db_pools::{Connection, Database};
 use rocket_db_pools::mongodb::{Client, Collection};
 use rocket_db_pools::mongodb::bson::{self, doc};
 use rocket::http::Status;
@@ -37,9 +37,9 @@ use utils::{check_cookie, derive_seed};
 
 const SALT: &str = "your-server-side-secret-salt";
 const EPHEM_MSK: [u8; 32] = [1; 32];
-const use_db: bool = false;
-const db_name: &str = "MurmurDB";
-const collection_name: &str = "mmrs";
+const USE_DB: bool = false;
+const DB_NAME: &str = "MurmurDB";
+const COLLECTION_NAME: &str = "mmrs";
 
 #[derive(Database)]
 #[database("Murmur")]
@@ -129,7 +129,7 @@ async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'
 #[post("/new", data = "<request>")]
 /// Generate a wallet valid for the next {validity} blocks
 async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>, db: Connection<Db>) -> Result<String, Status> {
-	check_cookie(cookies, |username, seed| async {
+	check_cookie(cookies, |username, seed, _object_id| async {
 		let (client, current_block_number, round_pubkey_bytes) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
 		// 1. prepare block schedule
@@ -149,8 +149,9 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>, db: Connection<
 		)
 		.map_err(|_| Status::InternalServerError)?;
 		// 3. add to storage
-		if use_db {
-			store::write_to_db(db_name, collection_name, mmr_store.clone(), db, None).await;
+		if USE_DB {
+			let final_object_id = store::write_to_db(DB_NAME, COLLECTION_NAME, mmr_store.clone(), db, None).await;
+			cookies.add(Cookie::new("object_id", final_object_id.clone()));
 		} else {
 			store::write_to_file(mmr_store.clone());
 		}
@@ -170,7 +171,7 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>, db: Connection<
 #[post("/execute", data = "<request>")]
 /// Execute a transaction from the wallet
 async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>, db: Connection<Db>) -> Result<String, Status> {
-	check_cookie(cookies, |username, seed| async {
+	check_cookie(cookies, |username, seed, object_id| async {
 		let (client, current_block_number, _) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
 
@@ -185,9 +186,9 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>, db: Con
 		});
 
 		let store: MurmurStore;
-		if use_db {
-			let object_id_string = "str".to_string();
-			store = store::load_from_db(object_id_string, db_name, collection_name, db, None).await;
+		if USE_DB {
+			let object_id_string = object_id.to_string();
+			store = store::load_from_db(object_id_string, DB_NAME, COLLECTION_NAME, db, None).await;
 		} else {
 			store = store::load_from_file();
 		}

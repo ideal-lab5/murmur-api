@@ -41,7 +41,7 @@ pub(crate) async fn load_from_db(object_id_string: String, db_name: &str, collec
 
 	let mmr_collection: Collection<MurmurStore>= db.database(&db_name).collection(&collection_name);
 
-	let cursor = mmr_collection.find(filter, options).await?;
+	let mut cursor = mmr_collection.find(filter, options).await.unwrap();
 
 	let mmr = cursor.try_next().await.unwrap().unwrap();
 
@@ -56,15 +56,18 @@ pub(crate) fn write_to_file(mmr_store: MurmurStore) {
 	serde_cbor::to_writer(mmr_store_file, &mmr_store).unwrap();
 }
 
-pub (crate) async fn write_to_db<T:Serialize>(db_name: &str, collection_name: &str, doc: T, db:Connection<Db>, options: Option<InsertOneOptions>) {
+pub (crate) async fn write_to_db<T:Serialize>(db_name: &str, collection_name: &str, doc: T, db:Connection<Db>, options: Option<InsertOneOptions>) -> String {
 
 	let insert_result = db.database(db_name).collection(collection_name).insert_one(doc, options).await;
+	let mut object_id = String::new();
 
 	match insert_result {
 		Err(e) => println!("Error inserting record : {e:?}"),
 		Ok(insert) => {
 			println!("succesfully inserted record, {insert:?}");
+			object_id = String::from(insert.inserted_id.as_str().unwrap());
 		}
 	}
 
+	object_id
 }
