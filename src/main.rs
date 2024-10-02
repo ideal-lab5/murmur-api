@@ -40,6 +40,61 @@ struct LoginRequest {
 	username: String,
 	password: String,
 }
+#[derive(Serialize, Deserialize)]
+struct MMR {
+	test: String,
+	test2: String
+}
+
+// #[get("/insert")]
+// async fn insert(db: Connection<Db>) {
+// 	// db.database("admin").run_command(doc! {"ping": 1}, None).await;
+// 	let test = String::from("abc");
+// 	let test2 = String::from("cde");
+// 	let doc = MMR{test, test2};
+// 	let insert_result = db.database("Mmr").collection("mmrs").insert_one(doc, None).await;
+
+// 	match insert_result {
+// 		Err(e) => println!("Error inserting record : {e:?}"),
+// 		Ok(insert) => {
+// 			println!("succesfully inserted record, {insert:?}");
+// 		}
+// 	}
+// 	// println!("Pinged your deployment. You successfully connected to MongoDB!");
+// 	// Db.database("admin")
+// }
+
+// #[get("/delete")]
+// async fn delete(db: Connection<Db>) {
+
+// 	let test = String::from("abc");
+// 	let test2 = String::from("cde");
+// 	let object = MMR{test, test2};
+
+// 	let bson_try = bson::to_bson(&object);
+// 	match bson_try {
+// 		Err(e) => println!("Error turning object into bson {e:?}"),
+// 		Ok(bson_object) => {
+
+// 			let collection: Collection<MMR> = db.database("Mmr").collection("mmrs");
+
+// 			// Can delete by reconstructing the object or by using the object ID that is 
+// 			// created on record insertion
+// 			let query = bson_object.as_document().unwrap();
+// 			// let object_id = ObjectId::parse_str("66fc1dc432627ab776148773").unwrap();
+// 			// let query = doc!{"_id": object_id};
+			
+
+// 			let delete_result = collection.delete_one(query.clone(), None).await;
+		
+// 			// let delete_result = collection.delete_one(query.clone(), None).await;
+// 			match delete_result {
+// 					Err(e) => println!("Deletion error occurred: {e:?}"),
+// 					Ok(success) => println!("Deletion Succeeded {success:?}")
+// 				}
+// 		}
+// 	}
+// }
 
 #[derive(Deserialize)]
 struct ExecuteRequest {
