@@ -2740,6 +2740,7 @@ name = "murmur-api"
 version = "0.1.0"
 dependencies = [
  "bcrypt",
+ "hex",
  "murmur-lib",
  "rocket",
  "serde",

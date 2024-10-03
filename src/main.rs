@@ -31,7 +31,7 @@ use sp_core::crypto::Ss58Codec;
 use std::env;
 use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
-use utils::{check_cookie, derive_seed};
+use utils::{check_cookie, derive_seed, MurmurError};
 
 fn get_salt() -> String {
 	env::var("SALT").unwrap_or_else(|_| "0123456789abcdef".to_string())
@@ -60,13 +60,16 @@ struct LoginRequest {
 
 #[derive(Deserialize)]
 struct ExecuteRequest {
-	amount: u128,
+	amount: String,
 	to: String,
+	current_block_number: BlockNumber,
 }
 
 #[derive(Deserialize)]
 struct NewRequest {
 	validity: u32,
+	current_block_number: BlockNumber,
+	round_pubkey_bytes: String,
 }
 
 #[post("/login", data = "<login_request>")]
@@ -82,16 +85,30 @@ async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'
 }
 
 #[post("/new", data = "<request>")]
-/// Generate a wallet valid for the next {validity} blocks
-async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<String, Status> {
+/// Generate a wallet valid for the next {request.validity} blocks
+async fn new(
+	cookies: &CookieJar<'_>,
+	request: Json<NewRequest>,
+) -> Result<String, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		let (client, current_block_number, round_pubkey_bytes) =
-			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+		let (client, _, _) = murmur::idn_connect()
+			.await
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
+
+		let round_pubkey_bytes = hex::decode(request.round_pubkey_bytes.clone()).map_err(|_| {
+			(
+				Status::BadRequest,
+				format!(
+					"There is an issue with the `round_pubkey_bytes` input `{:?}`",
+					&request.round_pubkey_bytes
+				),
+			)
+		})?;
 		// 1. prepare block schedule
 		let mut schedule: Vec<BlockNumber> = Vec::new();
 		for i in 2..request.validity + 2 {
 			// wallet is 'active' in 2 blocks
-			let next_block_number: BlockNumber = current_block_number + i;
+			let next_block_number: BlockNumber = request.current_block_number + i;
 			schedule.push(next_block_number);
 		}
 		// 2. create mmr
@@ -102,7 +119,7 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<Strin
 			schedule,
 			round_pubkey_bytes,
 		)
-		.map_err(|_| Status::InternalServerError)?;
+		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 		// 3. add to storage
 		store::write(mmr_store.clone());
 		// sign and send the call
@@ -111,7 +128,7 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<Strin
 			.tx()
 			.sign_and_submit_then_watch_default(&call, &from)
 			.await
-			.map_err(|_| Status::InternalServerError)?;
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 		Ok("MMR proxy account creation successful!".to_string())
 	})
 	.await
@@ -119,23 +136,43 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<Strin
 
 #[post("/execute", data = "<request>")]
 /// Execute a transaction from the wallet
-async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Result<String, Status> {
+async fn execute(
+	cookies: &CookieJar<'_>,
+	request: Json<ExecuteRequest>,
+) -> Result<String, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		let (client, current_block_number, _) =
-			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+		let (client, _, _) = murmur::idn_connect()
+			.await
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
-		let from_ss58 = sp_core::crypto::AccountId32::from_ss58check(&request.to).unwrap();
-
+		let from_ss58 =
+			sp_core::crypto::AccountId32::from_ss58check(&request.to).map_err(|_| {
+				(
+					Status::BadRequest,
+					format!("There is an issue with the `to` input `{:?}`", &request.to),
+				)
+			})?;
 		let bytes: &[u8] = from_ss58.as_ref();
-		let from_ss58_sized: [u8; 32] = bytes.try_into().unwrap();
+		let from_ss58_sized: [u8; 32] = bytes.try_into().map_err(|_| {
+			(
+				Status::BadRequest,
+				format!("There is an issue with the `to` input `{:?}`", &request.to),
+			)
+		})?;
 		let to = AccountId32::from(from_ss58_sized);
-		let balance_transfer_call = Balances(Call::transfer_allow_death {
-			dest: MultiAddress::<_, u32>::from(to),
-			value: request.amount,
-		});
+
+		let value = request.amount.parse::<u128>().map_err(|_| {
+			(
+				Status::BadRequest,
+				format!("There is an issue with the `amount` input `{:?}`", &request.amount),
+			)
+		})?;
+
+		let balance_transfer_call =
+			Balances(Call::transfer_allow_death { dest: MultiAddress::<_, u32>::from(to), value });
 
 		let store = store::load();
-		let target_block_number = current_block_number + 1;
+		let target_block_number = request.current_block_number + 1;
 
 		let tx = murmur::prepare_execute(
 			username.into(),
@@ -144,7 +181,7 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>) -> Resu
 			store,
 			balance_transfer_call,
 		)
-		.map_err(|_| Status::InternalServerError)?;
+		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
 		// submit the tx using alice to sign it
 		let _ = client.tx().sign_and_submit_then_watch_default(&tx, &dev::alice()).await;

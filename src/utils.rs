@@ -20,10 +20,10 @@ use rocket::http::{CookieJar, Status};
 pub(crate) async fn check_cookie<'a, F, Fut, R>(
 	cookies: &'a CookieJar<'_>,
 	callback: F,
-) -> Result<R, Status>
+) -> Result<R, (Status, String)>
 where
 	F: FnOnce(&'a str, &'a str) -> Fut,
-	Fut: std::future::Future<Output = Result<R, Status>>,
+	Fut: std::future::Future<Output = Result<R, (Status, String)>>,
 {
 	let username = cookies.get("username");
 	let seed = cookies.get("seed");
@@ -33,7 +33,7 @@ where
 			let seed = seed_cookie.value();
 			callback(username, seed).await
 		},
-		_ => Err(Status::Forbidden),
+		_ => Err((Status::Forbidden, "Not logged in".to_string())),
 	}
 }
 
@@ -41,4 +41,24 @@ pub(crate) fn derive_seed(password: &str, username: &str, salt: &str) -> String 
 	hash_with_salt(format!("{}:{}", username, password), 4, salt.as_bytes())
 		.unwrap()
 		.to_string()
+}
+
+pub(crate) struct MurmurError(pub(crate) murmur::Error);
+
+impl std::fmt::Display for MurmurError {
+    #[allow(unreachable_patterns)]
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self.0 {
+			murmur::Error::ExecuteError => write!(f, "Murmur: Execute error"),
+			murmur::Error::MMRError => write!(f, "Murmur: MMR error"),
+			murmur::Error::InconsistentStore => write!(f, "Murmur: Inconsistent store"),
+			murmur::Error::NoLeafFound => write!(f, "Murmur: No leaf found"),
+			murmur::Error::NoCiphertextFound => write!(f, "Murmur: No ciphertext found"),
+			murmur::Error::TlockFailed => write!(f, "Murmur: Tlock failed"),
+			murmur::Error::InvalidBufferSize => write!(f, "Murmur: Invalid buffer size"),
+			murmur::Error::InvalidSeed => write!(f, "Murmur: Invalid seed"),
+			murmur::Error::InvalidPubkey => write!(f, "Murmur: Invalid pubkey"),
+			_ => write!(f, "Murmur: Unknown error"),
+		}
+	}
 }
