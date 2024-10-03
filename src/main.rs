@@ -33,7 +33,7 @@ use subxt_signer::sr25519::dev;
 use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
 
 #[derive(Deserialize)]
-struct LoginRequest {
+struct AuthRequest {
 	username: String,
 	password: String,
 }
@@ -52,11 +52,11 @@ struct NewRequest {
 	round_pubkey_bytes: String,
 }
 
-#[post("/authenticate", data = "<login_request>")]
+#[post("/authenticate", data = "<auth_request>")]
 /// Authenticate the user and start a session
-async fn authenticate(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'static str {
-	let username = &login_request.username;
-	let password = &login_request.password;
+async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) -> &'static str {
+	let username = &auth_request.username;
+	let password = &auth_request.password;
 	let seed = derive_seed(username, password, &get_salt());
 
 	cookies.add(Cookie::new("username", username.clone()));
