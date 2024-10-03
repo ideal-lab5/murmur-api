@@ -28,29 +28,9 @@ use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::{json::Json, Deserialize};
 use sp_core::crypto::Ss58Codec;
-use std::env;
 use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
-use utils::{check_cookie, derive_seed, MurmurError};
-
-fn get_salt() -> String {
-	env::var("SALT").unwrap_or_else(|_| "0123456789abcdef".to_string())
-}
-
-fn get_ephem_msk() -> [u8; 32] {
-	let ephem_msk_str = env::var("EPHEM_MSK").unwrap_or_else(|_| {
-		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1".to_string()
-	});
-	let ephem_msk_vec: Vec<u8> = ephem_msk_str
-		.split(',')
-		.map(|s| s.trim().parse().expect("Invalid integer in EPHEM_MSK"))
-		.collect();
-	let mut ephem_msk = [0u8; 32];
-	for (i, &byte) in ephem_msk_vec.iter().enumerate().take(32) {
-		ephem_msk[i] = byte;
-	}
-	ephem_msk
-}
+use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
 
 #[derive(Deserialize)]
 struct LoginRequest {
@@ -72,8 +52,9 @@ struct NewRequest {
 	round_pubkey_bytes: String,
 }
 
-#[post("/login", data = "<login_request>")]
-async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'static str {
+#[post("/authenticate", data = "<login_request>")]
+/// Authenticate the user and start a session
+async fn authenticate(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'static str {
 	let username = &login_request.username;
 	let password = &login_request.password;
 	let seed = derive_seed(username, password, &get_salt());
@@ -81,7 +62,7 @@ async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'
 	cookies.add(Cookie::new("username", username.clone()));
 	cookies.add(Cookie::new("seed", seed.clone()));
 
-	"User logged in, session started."
+	"User authenticated, session started."
 }
 
 #[post("/new", data = "<request>")]
@@ -193,5 +174,5 @@ async fn execute(
 
 #[launch]
 fn rocket() -> _ {
-	rocket::build().mount("/", routes![login, new, execute])
+	rocket::build().mount("/", routes![authenticate, new, execute])
 }

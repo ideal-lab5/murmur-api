@@ -2,6 +2,12 @@
 
 This is a simple API that allows you to interact with [Murmur Core](https://github.com/ideal-lab5/murmur).
 
+## Usage
+
+```bash
+cargo run
+```
+
 ## Environment Variables
 
 In live environments you should set the following environment variables:

@@ -16,6 +16,7 @@
 
 use bcrypt::hash_with_salt;
 use rocket::http::{CookieJar, Status};
+use std::env;
 
 pub(crate) async fn check_cookie<'a, F, Fut, R>(
 	cookies: &'a CookieJar<'_>,
@@ -46,7 +47,7 @@ pub(crate) fn derive_seed(password: &str, username: &str, salt: &str) -> String 
 pub(crate) struct MurmurError(pub(crate) murmur::Error);
 
 impl std::fmt::Display for MurmurError {
-    #[allow(unreachable_patterns)]
+	#[allow(unreachable_patterns)]
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self.0 {
 			murmur::Error::ExecuteError => write!(f, "Murmur: Execute error"),
@@ -61,4 +62,23 @@ impl std::fmt::Display for MurmurError {
 			_ => write!(f, "Murmur: Unknown error"),
 		}
 	}
+}
+
+pub(crate) fn get_salt() -> String {
+	env::var("SALT").unwrap_or_else(|_| "0123456789abcdef".to_string())
+}
+
+pub(crate) fn get_ephem_msk() -> [u8; 32] {
+	let ephem_msk_str = env::var("EPHEM_MSK").unwrap_or_else(|_| {
+		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1".to_string()
+	});
+	let ephem_msk_vec: Vec<u8> = ephem_msk_str
+		.split(',')
+		.map(|s| s.trim().parse().expect("Invalid integer in EPHEM_MSK"))
+		.collect();
+	let mut ephem_msk = [0u8; 32];
+	for (i, &byte) in ephem_msk_vec.iter().enumerate().take(32) {
+		ephem_msk[i] = byte;
+	}
+	ephem_msk
 }
