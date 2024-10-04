@@ -29,7 +29,7 @@ where
 	let seed = cookies.get("seed");
 	let object_id = cookies.get("object_id");
 	match (username, seed, object_id) {
-		(Some(username_cookie), Some(seed_cookie), Some(object_id_cookie) ) => {
+		(Some(username_cookie), Some(seed_cookie), Some(object_id_cookie)) => {
 			let username = username_cookie.value();
 			let seed = seed_cookie.value();
 			let object_id = object_id_cookie.value();
