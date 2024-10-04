@@ -28,12 +28,29 @@ use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::{json::Json, Deserialize};
 use sp_core::crypto::Ss58Codec;
+use std::env;
 use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
 use utils::{check_cookie, derive_seed};
 
-const SALT: &str = "your-server-side-secret-salt";
-const EPHEM_MSK: [u8; 32] = [1; 32];
+fn get_salt() -> String {
+	env::var("SALT").unwrap_or_else(|_| "0123456789abcdef".to_string())
+}
+
+fn get_ephem_msk() -> [u8; 32] {
+	let ephem_msk_str = env::var("EPHEM_MSK").unwrap_or_else(|_| {
+		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1".to_string()
+	});
+	let ephem_msk_vec: Vec<u8> = ephem_msk_str
+		.split(',')
+		.map(|s| s.trim().parse().expect("Invalid integer in EPHEM_MSK"))
+		.collect();
+	let mut ephem_msk = [0u8; 32];
+	for (i, &byte) in ephem_msk_vec.iter().enumerate().take(32) {
+		ephem_msk[i] = byte;
+	}
+	ephem_msk
+}
 
 #[derive(Deserialize)]
 struct LoginRequest {
@@ -56,7 +73,7 @@ struct NewRequest {
 async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'static str {
 	let username = &login_request.username;
 	let password = &login_request.password;
-	let seed = derive_seed(username, password, SALT);
+	let seed = derive_seed(username, password, &get_salt());
 
 	cookies.add(Cookie::new("username", username.clone()));
 	cookies.add(Cookie::new("seed", seed.clone()));
@@ -81,7 +98,7 @@ async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>) -> Result<Strin
 		let (call, mmr_store) = murmur::create(
 			username.into(),
 			seed.into(),
-			EPHEM_MSK, // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
+			get_ephem_msk(), // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
 			schedule,
 			round_pubkey_bytes,
 		)
