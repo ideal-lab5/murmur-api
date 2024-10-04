@@ -30,10 +30,6 @@ const DB_NAME: &str = "MurmurDB";
 const COLLECTION_NAME: &str = "mmrs";
 const DB_URI: &str = "mongodb+srv://murmurapi:GuVsTAEbQtNnnbPj@useast.m8j6h.mongodb.net/?retryWrites=true&w=majority&appName=USEast";
 
-#[derive(Database)]
-#[database("Murmur")]
-struct Db(Client);
-
 pub(crate) struct Store {
 	pub(crate) col: Collection<MurmurStore>,
 }
