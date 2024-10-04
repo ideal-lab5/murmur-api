@@ -25,6 +25,7 @@ use rocket_db_pools::{
 };
 use std::borrow::Borrow;
 
+// TODO: these should be moved to env vars like https://github.com/ideal-lab5/murmur-api/blob/8b7edd4f17ccdcd7a8c832525fce1df4781403fe/src/utils.rs#L67-L84
 const DB_NAME: &str = "MurmurDB";
 const COLLECTION_NAME: &str = "mmrs";
 const DB_URI: &str = "mongodb+srv://murmurapi:GuVsTAEbQtNnnbPj@useast.m8j6h.mongodb.net/?retryWrites=true&w=majority&appName=USEast";

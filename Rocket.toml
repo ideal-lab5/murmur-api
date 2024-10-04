@@ -1,2 +1,0 @@
-[default.databases.Murmur]
-url = "mongodb+srv://murmurapi:GuVsTAEbQtNnnbPj@useast.m8j6h.mongodb.net/?retryWrites=true&w=majority&appName=USEast"
