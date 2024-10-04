@@ -152,7 +152,7 @@ async fn execute(
 					Some(murmur_store) => {
 
 						let target_block_number = current_block_number + 1;
-						
+
 						let tx = murmur::prepare_execute(
 							username.into(),
 							seed.into(),
@@ -166,7 +166,7 @@ async fn execute(
 						Ok("Transaction executed".to_string())
 					},
 					None => {
-						Err(Status::InternalServerError)
+						Err(Status::BadRequest)
 					}
 				}
 			}
