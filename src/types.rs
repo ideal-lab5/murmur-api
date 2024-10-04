@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use murmur::{BlockNumber, MurmurStore};
+use murmur::BlockNumber;
 use rocket::http::Status;
 use rocket::response::Responder;
 use rocket::serde::{Deserialize, Serialize};
@@ -78,7 +78,6 @@ impl<'a> From<&'a murmur::Create> for Create {
 #[derive(Serialize)]
 pub(crate) struct CreateResponse {
 	pub(crate) payload: Payload<Create>,
-	pub(crate) store: MurmurStore,
 }
 
 impl<'r> Responder<'r, 'static> for CreateResponse {

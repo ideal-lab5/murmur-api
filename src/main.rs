@@ -78,7 +78,7 @@ async fn create(
 		// 3. add to storage
 		store::write(store.clone());
 		// 4. return the call data
-		Ok(CreateResponse { payload: payload.into(), store })
+		Ok(CreateResponse { payload: payload.into() })
 	})
 	.await
 }
