@@ -80,7 +80,7 @@ async fn new(
 	request: Json<NewRequest>,
 	db: Connection<Db>,
 ) -> Result<String, Status> {
-	check_cookie(cookies, |username, seed, _object_id| async {
+	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, round_pubkey_bytes) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
 		// 1. prepare block schedule
@@ -123,7 +123,7 @@ async fn execute(
 	request: Json<ExecuteRequest>,
 	db: Connection<Db>,
 ) -> Result<String, Status> {
-	check_cookie(cookies, |username, seed, object_id| async {
+	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, _) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
 
