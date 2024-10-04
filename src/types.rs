@@ -114,11 +114,11 @@ impl<'a> From<&'a murmur::Proxy> for Proxy {
 }
 
 #[derive(Serialize)]
-pub(crate) struct ProxyResponse {
+pub(crate) struct ExecuteResponse {
 	pub(crate) payload: Payload<Proxy>,
 }
 
-impl<'r> Responder<'r, 'static> for ProxyResponse {
+impl<'r> Responder<'r, 'static> for ExecuteResponse {
 	fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
 		let json_response =
 			serde_json::to_string(&self).map_err(|_| Status::InternalServerError)?;

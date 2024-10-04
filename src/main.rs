@@ -32,7 +32,7 @@ use rocket::http::{Cookie, CookieJar};
 use rocket::serde::json::Json;
 use rocket_cors::{AllowedOrigins, CorsOptions};
 use subxt::utils::MultiAddress;
-use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ProxyResponse};
+use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ExecuteResponse};
 use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
 
 #[post("/authenticate", data = "<auth_request>")]
@@ -88,7 +88,7 @@ async fn create(
 async fn execute(
 	cookies: &CookieJar<'_>,
 	request: Json<ExecuteRequest>,
-) -> Result<ProxyResponse, (Status, String)> {
+) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
 		let to = translate::ss58_to_account_id(&request.to)
 			.map_err(|e| (Status::BadRequest, format!("`request.to`: {:?}", e)))?;
@@ -113,7 +113,7 @@ async fn execute(
 		)
 		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
-		Ok(ProxyResponse { payload: payload.into() })
+		Ok(ExecuteResponse { payload: payload.into() })
 	})
 	.await
 }
