@@ -22,7 +22,7 @@ mod utils;
 
 use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
-	BlockNumber, MurmurStore,
+	BlockNumber
 };
 use rocket::{
 	http::{Cookie, CookieJar, Status},
@@ -39,9 +39,6 @@ use utils::{check_cookie, derive_seed};
 
 const SALT: &str = "your-server-side-secret-salt";
 const EPHEM_MSK: [u8; 32] = [1; 32];
-const USE_DB: bool = true;
-const DB_NAME: &str = "MurmurDB";
-const COLLECTION_NAME: &str = "mmrs";
 
 #[derive(Database)]
 #[database("Murmur")]
@@ -103,13 +100,9 @@ async fn new(
 		)
 		.map_err(|_| Status::InternalServerError)?;
 		// 3. add to storage
-		if USE_DB {
-			let final_object_id =
-				store::write_to_db(DB_NAME, COLLECTION_NAME, mmr_store.clone(), db, None).await;
-			cookies.add(Cookie::new("object_id", final_object_id.clone()));
-		} else {
-			store::write_to_file(mmr_store.clone());
-		}
+
+		let username_string: String = username.into();
+		store::write(username_string, mmr_store.clone(), db, None).await;
 
 		// sign and send the call
 		let from = dev::alice();
@@ -144,14 +137,9 @@ async fn execute(
 			value: request.amount,
 		});
 
-		let store: MurmurStore;
-		if USE_DB {
-			let object_id_string = object_id.to_string();
-			store = store::load_from_db(object_id_string, DB_NAME, COLLECTION_NAME, db, None).await;
-		} else {
-			store = store::load_from_file();
-		}
-
+		// let store: MurmurStore;
+		let username_string = username.into();
+		let store = store::load(username_string, db, None).await.unwrap().mmr;
 		let target_block_number = current_block_number + 1;
 
 		let tx = murmur::prepare_execute(

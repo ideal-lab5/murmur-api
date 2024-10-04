@@ -14,75 +14,74 @@
  * limitations under the License.
  */
 
-use murmur::MurmurStore;
-use rocket_db_pools::mongodb::{
-	bson::doc,
-	options::{FindOptions, InsertOneOptions},
-};
-use std::fs::File;
+use rocket::futures::TryStreamExt;
+use rocket_db_pools::mongodb::options::{FindOptions, InsertOneOptions};
+use rocket_db_pools::mongodb::error::Error;
+use rocket_db_pools::mongodb::bson::doc;
 
-use rocket::{futures::TryStreamExt, serde::Serialize};
+use rocket::serde::{Deserialize, Serialize};
 use rocket_db_pools::{
-	mongodb::{bson::oid::ObjectId, Collection},
+	mongodb::Collection,
 	Connection,
 };
 
+
 use crate::Db;
+use murmur::MurmurStore;
 
-pub(crate) fn load_from_file() -> MurmurStore {
-	// TODO: load from DB
-	let mmr_store_file = File::open("mmr_store").expect("Unable to open file");
-	let data: MurmurStore = serde_cbor::from_reader(mmr_store_file).unwrap();
+const DB_NAME: &str = "MurmurDB";
+const COLLECTION_NAME: &str = "mmrs";
 
-	data
+
+#[derive (Serialize, Deserialize)]
+pub struct MurmurDbObject {
+	pub mmr: MurmurStore,
+	pub username: String
 }
 
-pub(crate) async fn load_from_db(
-	object_id_string: String,
-	db_name: &str,
-	collection_name: &str,
+pub(crate) async fn load(
+	username: &str,
 	db: Connection<Db>,
 	options: Option<FindOptions>,
-) -> MurmurStore {
-	let object_id = ObjectId::parse_str(object_id_string).unwrap();
+) -> Result<MurmurDbObject, Error> {
 
-	let filter = doc! {"_id": object_id};
+	let filter = doc! {"username": username};
 
-	let mmr_collection: Collection<MurmurStore> =
-		db.database(&db_name).collection(&collection_name);
+	let mmr_collection: Collection<MurmurDbObject> =
+		db.database(&DB_NAME).collection(&COLLECTION_NAME);
 
-	let mut cursor = mmr_collection.find(filter, options).await.unwrap();
+	let cursor_result = mmr_collection.find(filter, options).await;
 
-	let mmr = cursor.try_next().await.unwrap().unwrap();
+	match cursor_result {
+		Err(e) => Err(e),
+		Ok(mut mmr_cursor) => {
+			let mmr_next = mmr_cursor.try_next().await;
+			match mmr_next {
+				Err(e) => Err(e),
+				Ok(mmr_option) => {
+					let mmr = mmr_option.unwrap();
+					Ok(mmr)
+				}
+			}
 
-	mmr
+		}
+	}
 }
 
-/// Write the MMR data to a file
-pub(crate) fn write_to_file(mmr_store: MurmurStore) {
-	// TODO: write to DB
-	let mmr_store_file = File::create("mmr_store").expect("It should create the file");
-	serde_cbor::to_writer(mmr_store_file, &mmr_store).unwrap();
-}
-
-pub(crate) async fn write_to_db<T: Serialize>(
-	db_name: &str,
-	collection_name: &str,
-	doc: T,
+pub(crate) async fn write(
+	username: String,
+	mmr: MurmurStore,
 	db: Connection<Db>,
 	options: Option<InsertOneOptions>,
-) -> String {
-	let insert_result =
-		db.database(db_name).collection(collection_name).insert_one(doc, options).await;
-	let mut object_id = String::new();
+) {
+	let murmur_data_object = MurmurDbObject{mmr, username};
+	let mmr_collection: Collection<MurmurDbObject> = db.database(DB_NAME).collection(COLLECTION_NAME);
+	let insert_result = mmr_collection.insert_one(murmur_data_object, options).await;
 
 	match insert_result {
 		Err(e) => println!("Error inserting record : {e:?}"),
 		Ok(insert) => {
 			println!("succesfully inserted record, {insert:?}");
-			object_id = String::from(insert.inserted_id.as_str().unwrap());
 		},
 	}
-
-	object_id
 }
