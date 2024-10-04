@@ -18,7 +18,6 @@ use rocket::futures::TryStreamExt;
 use rocket_db_pools::mongodb::options::{FindOptions, InsertOneOptions};
 use rocket_db_pools::mongodb::error::Error;
 use rocket_db_pools::mongodb::bson::doc;
-
 use rocket::serde::{Deserialize, Serialize};
 use rocket_db_pools::mongodb::results::InsertOneResult;
 use rocket_db_pools::{
@@ -26,13 +25,10 @@ use rocket_db_pools::{
 	Connection,
 };
 
-
 use crate::Db;
 use murmur::MurmurStore;
-
 const DB_NAME: &str = "MurmurDB";
 const COLLECTION_NAME: &str = "mmrs";
-
 
 #[derive (Serialize, Deserialize)]
 pub struct MurmurDbObject {
@@ -47,10 +43,7 @@ pub(crate) async fn load(
 ) -> Result<MurmurDbObject, Error> {
 
 	let filter = doc! {"username": username};
-
-	let mmr_collection: Collection<MurmurDbObject> =
-		db.database(&DB_NAME).collection(&COLLECTION_NAME);
-
+	let mmr_collection: Collection<MurmurDbObject> = db.database(&DB_NAME).collection(&COLLECTION_NAME);
 	let cursor_result = mmr_collection.find(filter, options).await;
 
 	match cursor_result {
@@ -64,7 +57,6 @@ pub(crate) async fn load(
 					Ok(mmr)
 				}
 			}
-
 		}
 	}
 }
