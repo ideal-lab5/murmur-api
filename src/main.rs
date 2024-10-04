@@ -83,6 +83,7 @@ async fn new(
 	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, round_pubkey_bytes) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+			
 		// 1. prepare block schedule
 		let mut schedule: Vec<BlockNumber> = Vec::new();
 		for i in 2..request.validity + 2 {
@@ -90,6 +91,7 @@ async fn new(
 			let next_block_number: BlockNumber = current_block_number + i;
 			schedule.push(next_block_number);
 		}
+
 		// 2. create mmr
 		let (call, mmr_store) = murmur::create(
 			username.into(),
@@ -99,23 +101,23 @@ async fn new(
 			round_pubkey_bytes,
 		)
 		.map_err(|_| Status::InternalServerError)?;
+		
 		// 3. add to storage
-
 		let username_string: String = username.into();
 		let insert_result = store::write(username_string, mmr_store.clone(), db, None).await;
 		match insert_result {
-			Err(e) => println!("an error occurred attempting to insert the record: {e:?}"),
-			Ok(result) => println!("insertion was successful: {result:?}")
+			Err(_e) => Err(Status::InternalServerError),
+			Ok(_result) => {
+				// sign and send the call
+			let from = dev::alice();
+			let _events = client
+				.tx()
+				.sign_and_submit_then_watch_default(&call, &from)
+				.await
+				.map_err(|_| Status::InternalServerError)?;
+			Ok("MMR proxy account creation successful!".to_string())
+			}
 		}
-
-		// sign and send the call
-		let from = dev::alice();
-		let _events = client
-			.tx()
-			.sign_and_submit_then_watch_default(&call, &from)
-			.await
-			.map_err(|_| Status::InternalServerError)?;
-		Ok("MMR proxy account creation successful!".to_string())
 	})
 	.await
 }
@@ -141,7 +143,6 @@ async fn execute(
 			value: request.amount,
 		});
 
-		// let store: MurmurStore;
 		let username_string = username.into();
 		let query_result = store::load(username_string, db, None).await;
 
