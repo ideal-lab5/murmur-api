@@ -24,9 +24,11 @@ use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
 	BlockNumber,
 };
+use rocket::http::Method;
 use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::{json::Json, Deserialize};
+use rocket_cors::{AllowedOrigins, CorsOptions};
 use sp_core::crypto::Ss58Codec;
 use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
@@ -174,5 +176,17 @@ async fn execute(
 
 #[launch]
 fn rocket() -> _ {
-	rocket::build().mount("/", routes![authenticate, new, execute])
+	let cors = CorsOptions::default()
+		.allowed_origins(AllowedOrigins::all())
+		.allowed_methods(
+			vec![Method::Get, Method::Post, Method::Patch]
+				.into_iter()
+				.map(From::from)
+				.collect(),
+		)
+		.allow_credentials(true)
+		.to_cors()
+		.unwrap();
+
+	rocket::build().mount("/", routes![authenticate, new, execute]).attach(cors)
 }
