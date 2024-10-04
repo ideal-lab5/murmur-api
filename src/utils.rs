@@ -14,26 +14,29 @@
  * limitations under the License.
  */
 
+use crate::store;
+
 use bcrypt::hash_with_salt;
 use rocket::http::{CookieJar, Status};
 
 pub(crate) async fn check_cookie<'a, F, Fut, R>(
 	cookies: &'a CookieJar<'_>,
+	s: &'a store::Store,
 	callback: F,
 ) -> Result<R, Status>
 where
-	F: FnOnce(&'a str, &'a str, &'a str) -> Fut,
+	F: FnOnce(&'a str, &'a str, &'a str, &'a store::Store) -> Fut,
 	Fut: std::future::Future<Output = Result<R, Status>>,
 {
 	let username = cookies.get("username");
 	let seed = cookies.get("seed");
 	let object_id = cookies.get("object_id");
 	match (username, seed, object_id) {
-		(Some(username_cookie), Some(seed_cookie), Some(object_id_cookie) ) => {
+		(Some(username_cookie), Some(seed_cookie), Some(object_id_cookie)) => {
 			let username = username_cookie.value();
 			let seed = seed_cookie.value();
 			let object_id = object_id_cookie.value();
-			callback(username, seed, object_id).await
+			callback(username, seed, object_id, s).await
 		},
 		_ => Err(Status::Forbidden),
 	}

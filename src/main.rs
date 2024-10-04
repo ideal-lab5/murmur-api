@@ -24,26 +24,18 @@ use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
 	BlockNumber, MurmurStore,
 };
-use rocket_db_pools::{Connection, Database};
-use rocket_db_pools::mongodb::Client;
-use rocket_db_pools::mongodb::bson::doc;
 use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::serde::{json::Json, Deserialize};
+use rocket::State;
 use sp_core::crypto::Ss58Codec;
+use store::Store;
 use subxt::utils::{AccountId32, MultiAddress};
 use subxt_signer::sr25519::dev;
 use utils::{check_cookie, derive_seed};
 
 const SALT: &str = "your-server-side-secret-salt";
 const EPHEM_MSK: [u8; 32] = [1; 32];
-const USE_DB: bool = true;
-const DB_NAME: &str = "MurmurDB";
-const COLLECTION_NAME: &str = "mmrs";
-
-#[derive(Database)]
-#[database("Murmur")]
-struct Db(Client); 
 
 #[derive(Deserialize)]
 struct LoginRequest {
@@ -76,50 +68,60 @@ async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'
 
 #[post("/new", data = "<request>")]
 /// Generate a wallet valid for the next {validity} blocks
-async fn new(cookies: &CookieJar<'_>, request: Json<NewRequest>, db: Connection<Db>) -> Result<String, Status> {
-	check_cookie(cookies, |username, seed, _object_id| async {
-		let (client, current_block_number, round_pubkey_bytes) =
-			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
-		// 1. prepare block schedule
-		let mut schedule: Vec<BlockNumber> = Vec::new();
-		for i in 2..request.validity + 2 {
-			// wallet is 'active' in 2 blocks
-			let next_block_number: BlockNumber = current_block_number + i;
-			schedule.push(next_block_number);
-		}
-		// 2. create mmr
-		let (call, mmr_store) = murmur::create(
-			username.into(),
-			seed.into(),
-			EPHEM_MSK, // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
-			schedule,
-			round_pubkey_bytes,
-		)
-		.map_err(|_| Status::InternalServerError)?;
-		// 3. add to storage
-		if USE_DB {
-			let final_object_id = store::write_to_db(DB_NAME, COLLECTION_NAME, mmr_store.clone(), db, None).await;
-			cookies.add(Cookie::new("object_id", final_object_id.clone()));
-		} else {
-			store::write_to_file(mmr_store.clone());
-		}
-		
-		// sign and send the call
-		let from = dev::alice();
-		let _events = client
-			.tx()
-			.sign_and_submit_then_watch_default(&call, &from)
-			.await
-			.map_err(|_| Status::InternalServerError)?;
-		Ok("MMR proxy account creation successful!".to_string())
-	})
-	.await
+async fn new(
+	cookies: &CookieJar<'_>,
+	request: Json<NewRequest>,
+	s: &State<Store>,
+) -> Result<String, Status> {
+	// check_cookie(cookies, s, |username, seed, _object_id| async {
+	// 	let (client, current_block_number, round_pubkey_bytes) =
+	// 		murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+	// 	// 1. prepare block schedule
+	// 	let mut schedule: Vec<BlockNumber> = Vec::new();
+	// 	for i in 2..request.validity + 2 {
+	// 		// wallet is 'active' in 2 blocks
+	// 		let next_block_number: BlockNumber = current_block_number + i;
+	// 		schedule.push(next_block_number);
+	// 	}
+	// 	// 2. create mmr
+	// 	let (call, mmr_store) = murmur::create(
+	// 		username.into(),
+	// 		seed.into(),
+	// 		EPHEM_MSK, // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
+	// 		schedule,
+	// 		round_pubkey_bytes,
+	// 	)
+	// 	.map_err(|_| Status::InternalServerError)?;
+	// 	// 3. add to storage
+	// 	if USE_DB {
+	// 		let final_object_id =
+	// 			store::write_to_db(DB_NAME, COLLECTION_NAME, mmr_store.clone(), db, None).await;
+	// 		cookies.add(Cookie::new("object_id", final_object_id.clone()));
+	// 	} else {
+	// 		store::write_to_file(mmr_store.clone());
+	// 	}
+
+	// 	// sign and send the call
+	// 	let from = dev::alice();
+	// 	let _events = client
+	// 		.tx()
+	// 		.sign_and_submit_then_watch_default(&call, &from)
+	// 		.await
+	// 		.map_err(|_| Status::InternalServerError)?;
+	// 	Ok("MMR proxy account creation successful!".to_string())
+	// })
+	// .await
+	Ok("TO DO".to_string())
 }
 
 #[post("/execute", data = "<request>")]
 /// Execute a transaction from the wallet
-async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>, db: Connection<Db>) -> Result<String, Status> {
-	check_cookie(cookies, |username, seed, object_id| async {
+async fn execute(
+	cookies: &CookieJar<'_>,
+	request: Json<ExecuteRequest>,
+	s: &State<Store>,
+) -> Result<String, Status> {
+	check_cookie(cookies, s, |username, seed, object_id, s| async {
 		let (client, current_block_number, _) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
 
@@ -134,13 +136,9 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>, db: Con
 		});
 
 		let store: MurmurStore;
-		if USE_DB {
-			let object_id_string = object_id.to_string();
-			store = store::load_from_db(object_id_string, DB_NAME, COLLECTION_NAME, db, None).await;
-		} else {
-			store = store::load_from_file();
-		}
-		
+		let object_id_string = object_id.to_string();
+		store = s.load(object_id_string).await;
+
 		let target_block_number = current_block_number + 1;
 
 		let tx = murmur::prepare_execute(
@@ -161,6 +159,7 @@ async fn execute(cookies: &CookieJar<'_>, request: Json<ExecuteRequest>, db: Con
 }
 
 #[launch]
-fn rocket() -> _ {
-	rocket::build().mount("/", routes![login, new, execute]).attach(Db::init())
+async fn rocket() -> _ {
+	let store: Store = Store::init().await;
+	rocket::build().manage(store).mount("/", routes![login, new, execute])
 }
