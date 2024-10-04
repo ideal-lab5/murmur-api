@@ -109,13 +109,13 @@ async fn new(
 			Err(_e) => Err(Status::InternalServerError),
 			Ok(_result) => {
 				// sign and send the call
-			let from = dev::alice();
-			let _events = client
-				.tx()
-				.sign_and_submit_then_watch_default(&call, &from)
-				.await
-				.map_err(|_| Status::InternalServerError)?;
-			Ok("MMR proxy account creation successful!".to_string())
+				let from = dev::alice();
+				let _events = client
+					.tx()
+					.sign_and_submit_then_watch_default(&call, &from)
+					.await
+					.map_err(|_| Status::InternalServerError)?;
+				Ok("MMR proxy account creation successful!".to_string())
 			}
 		}
 	})
