@@ -40,7 +40,7 @@ pub(crate) async fn load(
 	username: &str,
 	db: Connection<Db>,
 	options: Option<FindOptions>,
-) -> Result<MurmurDbObject, Error> {
+) -> Result<Option<MurmurStore>, Error> {
 
 	let filter = doc! {"username": username};
 	let mmr_collection: Collection<MurmurDbObject> = db.database(&DB_NAME).collection(&COLLECTION_NAME);
@@ -53,8 +53,12 @@ pub(crate) async fn load(
 			match mmr_next {
 				Err(e) => Err(e),
 				Ok(mmr_option) => {
-					let mmr = mmr_option.unwrap();
-					Ok(mmr)
+					match mmr_option {
+						Some(mmr_db_object) => {
+							Ok(Some(mmr_db_object.mmr))
+						},
+						None => Ok(None)
+					}
 				}
 			}
 		}

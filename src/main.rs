@@ -143,22 +143,34 @@ async fn execute(
 
 		// let store: MurmurStore;
 		let username_string = username.into();
-		let store = store::load(username_string, db, None).await.unwrap().mmr;
-		let target_block_number = current_block_number + 1;
+		let query_result = store::load(username_string, db, None).await;
 
-		let tx = murmur::prepare_execute(
-			username.into(),
-			seed.into(),
-			target_block_number,
-			store,
-			balance_transfer_call,
-		)
-		.map_err(|_| Status::InternalServerError)?;
+		match query_result {
+			Err(_e) => Err(Status::InternalServerError),
+			Ok(mmr_option) => {
+				match mmr_option {
+					Some(murmur_store) => {
 
-		// submit the tx using alice to sign it
-		let _ = client.tx().sign_and_submit_then_watch_default(&tx, &dev::alice()).await;
-
-		Ok("Transaction executed".to_string())
+						let target_block_number = current_block_number + 1;
+						
+						let tx = murmur::prepare_execute(
+							username.into(),
+							seed.into(),
+							target_block_number,
+							murmur_store,
+							balance_transfer_call,
+						)
+						.map_err(|_| Status::InternalServerError)?;
+						// submit the tx using alice to sign it
+						let _ = client.tx().sign_and_submit_then_watch_default(&tx, &dev::alice()).await;
+						Ok("Transaction executed".to_string())
+					},
+					None => {
+						Err(Status::InternalServerError)
+					}
+				}
+			}
+		}		
 	})
 	.await
 }
