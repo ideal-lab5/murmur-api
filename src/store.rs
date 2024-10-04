@@ -20,6 +20,7 @@ use rocket_db_pools::mongodb::error::Error;
 use rocket_db_pools::mongodb::bson::doc;
 
 use rocket::serde::{Deserialize, Serialize};
+use rocket_db_pools::mongodb::results::InsertOneResult;
 use rocket_db_pools::{
 	mongodb::Collection,
 	Connection,
@@ -73,15 +74,9 @@ pub(crate) async fn write(
 	mmr: MurmurStore,
 	db: Connection<Db>,
 	options: Option<InsertOneOptions>,
-) {
+) -> Result<InsertOneResult, Error>{
 	let murmur_data_object = MurmurDbObject{mmr, username};
 	let mmr_collection: Collection<MurmurDbObject> = db.database(DB_NAME).collection(COLLECTION_NAME);
 	let insert_result = mmr_collection.insert_one(murmur_data_object, options).await;
-
-	match insert_result {
-		Err(e) => println!("Error inserting record : {e:?}"),
-		Ok(insert) => {
-			println!("succesfully inserted record, {insert:?}");
-		},
-	}
+	insert_result
 }

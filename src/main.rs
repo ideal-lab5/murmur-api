@@ -102,7 +102,11 @@ async fn new(
 		// 3. add to storage
 
 		let username_string: String = username.into();
-		store::write(username_string, mmr_store.clone(), db, None).await;
+		let insert_result = store::write(username_string, mmr_store.clone(), db, None).await;
+		match insert_result {
+			Err(e) => println!("an error occurred attempting to insert the record: {e:?}"),
+			Ok(result) => println!("insertion was successful: {result:?}")
+		}
 
 		// sign and send the call
 		let from = dev::alice();
