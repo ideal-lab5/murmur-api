@@ -2793,7 +2793,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "w3f-bls",
- "zeroize",
 ]
 
 [[package]]

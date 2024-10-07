@@ -26,11 +26,14 @@ use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
 	BlockNumber,
 };
-use rocket::http::Method;
-use rocket::http::Status;
-use rocket::http::{Cookie, CookieJar};
-use rocket::serde::json::Json;
-use rocket_cors::{AllowedOrigins, CorsOptions};
+use rocket::{
+	http::{Cookie, CookieJar, Method, SameSite, Status},
+	serde::{json::Json, Deserialize}
+};
+use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions, CorsOptions};
+use sp_core::crypto::Ss58Codec;
+use subxt::utils::{AccountId32, MultiAddress};
+use subxt_signer::sr25519::dev;
 use subxt::utils::MultiAddress;
 use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ExecuteResponse};
 use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
@@ -42,8 +45,18 @@ async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) 
 	let password = &auth_request.password;
 	let seed = derive_seed(username, password, &get_salt());
 
-	cookies.add(Cookie::new("username", username.clone()));
-	cookies.add(Cookie::new("seed", seed.clone()));
+	let username_cookie = Cookie::build(("username", username.clone()))
+		.path("/")
+		.same_site(SameSite::None)
+		.secure(true);
+
+	let seed_cookie = Cookie::build(("seed", seed.clone()))
+		.path("/")
+		.same_site(SameSite::None)
+		.secure(true);
+
+	cookies.add(username_cookie);
+	cookies.add(seed_cookie);
 
 	"User authenticated, session started."
 }
@@ -128,9 +141,11 @@ fn rocket() -> _ {
 				.map(From::from)
 				.collect(),
 		)
+		.allowed_headers(AllowedHeaders::all())
 		.allow_credentials(true)
 		.to_cors()
 		.unwrap();
 
-	rocket::build().mount("/", routes![authenticate, create, execute]).attach(cors)
+	rocket::build().mount("/", routes![authenticate, new, execute])
+		.attach(cors)
 }
