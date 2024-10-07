@@ -2742,6 +2742,7 @@ dependencies = [
  "bcrypt",
  "hex",
  "murmur-lib",
+ "parity-scale-codec",
  "rocket",
  "rocket_cors",
  "serde",
@@ -2793,6 +2794,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "w3f-bls",
+ "zeroize",
 ]
 
 [[package]]

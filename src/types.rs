@@ -29,8 +29,7 @@ pub(crate) struct AuthRequest {
 
 #[derive(Deserialize)]
 pub(crate) struct ExecuteRequest {
-	pub(crate) amount: String,
-	pub(crate) to: String,
+	pub(crate) runtime_call: Vec<u8>,
 	pub(crate) current_block: BlockNumber,
 }
 
@@ -98,6 +97,7 @@ pub(crate) struct Proxy {
 	pub hash: Vec<u8>,
 	pub ciphertext: Vec<u8>,
 	pub proof: Vec<Vec<u8>>,
+	pub size: u64,
 }
 
 impl<'a> From<&'a murmur::Proxy> for Proxy {
@@ -108,6 +108,7 @@ impl<'a> From<&'a murmur::Proxy> for Proxy {
 			hash: proxy.hash.clone(),
 			ciphertext: proxy.ciphertext.clone(),
 			proof: proxy.proof.clone(),
+			size: proxy.size,
 		}
 	}
 }

@@ -23,18 +23,14 @@ mod types;
 mod utils;
 
 use murmur::{
-	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
-	BlockNumber,
+	BlockNumber, RuntimeCall,
 };
+use parity_scale_codec::Decode;
 use rocket::{
 	http::{Cookie, CookieJar, Method, SameSite, Status},
-	serde::{json::Json, Deserialize}
+	serde::json::Json,
 };
-use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions, CorsOptions};
-use sp_core::crypto::Ss58Codec;
-use subxt::utils::{AccountId32, MultiAddress};
-use subxt_signer::sr25519::dev;
-use subxt::utils::MultiAddress;
+use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ExecuteResponse};
 use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
 
@@ -103,26 +99,21 @@ async fn execute(
 	request: Json<ExecuteRequest>,
 ) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		let to = translate::ss58_to_account_id(&request.to)
-			.map_err(|e| (Status::BadRequest, format!("`request.to`: {:?}", e)))?;
-
-		let amount = translate::str_to_int(&request.amount)
-			.map_err(|e| (Status::BadRequest, format!("`request.amount`: {:?}`", e)))?;
-
-		let balance_transfer_call = Balances(Call::transfer_allow_death {
-			dest: MultiAddress::<_, u32>::from(to),
-			value: amount,
-		});
-
 		let store = store::load();
 		let target_block = request.current_block + 1;
 
+		print!("pre decode");
+		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..]).map_err(|e| {
+			print!("decode error {:?}", e);
+			(Status::InternalServerError, e.to_string())
+		})?;
+		print!("post decode {:?}", runtime_call);
 		let payload = murmur::prepare_execute(
 			username.into(),
 			seed.into(),
 			target_block,
 			store,
-			balance_transfer_call,
+			runtime_call,
 		)
 		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
@@ -146,6 +137,5 @@ fn rocket() -> _ {
 		.to_cors()
 		.unwrap();
 
-	rocket::build().mount("/", routes![authenticate, new, execute])
-		.attach(cors)
+	rocket::build().mount("/", routes![authenticate, create, execute]).attach(cors)
 }
