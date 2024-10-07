@@ -20,6 +20,9 @@ extern crate rocket;
 mod store;
 mod utils;
 
+use store::Store;
+use rocket::State;
+
 use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
 	BlockNumber
@@ -29,8 +32,7 @@ use rocket::{
 	serde::{json::Json, Deserialize},
 };
 use rocket_db_pools::{
-	mongodb::{bson::doc, Client},
-	Connection, Database,
+	mongodb::{bson::doc, Client}, Database,
 };
 use sp_core::crypto::Ss58Codec;
 use subxt::utils::{AccountId32, MultiAddress};
@@ -78,7 +80,7 @@ async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'
 async fn new(
 	cookies: &CookieJar<'_>,
 	request: Json<NewRequest>,
-	db: Connection<Db>,
+	db: &State<Store>,
 ) -> Result<String, Status> {
 	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, round_pubkey_bytes) =
@@ -104,7 +106,7 @@ async fn new(
 		
 		// 3. add to storage
 		let username_string: String = username.into();
-		let insert_result = store::write(username_string, mmr_store.clone(), db, None).await;
+		let insert_result = db.write(username_string, mmr_store.clone(), None).await;
 		match insert_result {
 			Err(_e) => Err(Status::InternalServerError),
 			Ok(_result) => {
@@ -127,7 +129,7 @@ async fn new(
 async fn execute(
 	cookies: &CookieJar<'_>,
 	request: Json<ExecuteRequest>,
-	db: Connection<Db>,
+	db: &State<Store>,
 ) -> Result<String, Status> {
 	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, _) =
@@ -144,7 +146,7 @@ async fn execute(
 		});
 
 		let username_string = username.into();
-		let query_result = store::load(username_string, db, None).await;
+		let query_result = db.load(username_string, None).await;
 
 		match query_result {
 			Err(_e) => Err(Status::InternalServerError),
@@ -177,6 +179,7 @@ async fn execute(
 }
 
 #[launch]
-fn rocket() -> _ {
-	rocket::build().mount("/", routes![login, new, execute]).attach(Db::init())
+async fn rocket() -> _ {
+	let store = Store::init().await;
+	rocket::build().mount("/", routes![login, new, execute]).manage(store)
 }

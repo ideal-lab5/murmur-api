@@ -16,18 +16,17 @@
 
 use rocket::futures::TryStreamExt;
 use rocket_db_pools::mongodb::options::{FindOptions, InsertOneOptions};
+use rocket_db_pools::mongodb::Client;
 use rocket_db_pools::mongodb::error::Error;
 use rocket_db_pools::mongodb::bson::doc;
-use rocket::serde::{Deserialize, Serialize};
 use rocket_db_pools::mongodb::results::InsertOneResult;
-use rocket_db_pools::{
-	mongodb::Collection,
-	Connection,
-};
+use rocket_db_pools::mongodb::Collection;
+use rocket::serde::{Deserialize, Serialize};
 
-use crate::Db;
+
 use murmur::MurmurStore;
 const DB_NAME: &str = "MurmurDB";
+const DB_URI: &str = "mongodb+srv://murmurapi:GuVsTAEbQtNnnbPj@useast.m8j6h.mongodb.net/?retryWrites=true&w=majority&appName=USEast";
 const COLLECTION_NAME: &str = "mmrs";
 
 #[derive (Serialize, Deserialize)]
@@ -36,43 +35,54 @@ pub struct MurmurDbObject {
 	pub username: String
 }
 
-pub(crate) async fn load(
-	username: &str,
-	db: Connection<Db>,
-	options: Option<FindOptions>,
-) -> Result<Option<MurmurStore>, Error> {
+pub(crate) struct Store {
+	pub(crate) col: Collection<MurmurDbObject>,
+}
 
-	let filter = doc! {"username": username};
-	let mmr_collection: Collection<MurmurDbObject> = db.database(&DB_NAME).collection(&COLLECTION_NAME);
-	let cursor_result = mmr_collection.find(filter, options).await;
+impl Store {
+	pub(crate) async fn init() -> Self {
+		let client = Client::with_uri_str(DB_URI).await.unwrap();
+		let col = client.database(&DB_NAME).collection(&COLLECTION_NAME);
+		Store { col }
+	}
 
-	match cursor_result {
-		Err(e) => Err(e),
-		Ok(mut mmr_cursor) => {
-			let mmr_next = mmr_cursor.try_next().await;
-			match mmr_next {
-				Err(e) => Err(e),
-				Ok(mmr_option) => {
-					match mmr_option {
-						Some(mmr_db_object) => {
-							Ok(Some(mmr_db_object.mmr))
-						},
-						None => Ok(None)
+	pub(crate) async fn load(
+		&self,
+		username: &str,
+		options: Option<FindOptions>,
+	) -> Result<Option<MurmurStore>, Error> {
+	
+		let filter = doc! {"username": username};
+		// let mmr_collection: Collection<MurmurDbObject> = db.database(&DB_NAME).collection(&COLLECTION_NAME);
+		let cursor_result = self.col.find(filter, options).await;
+	
+		match cursor_result {
+			Err(e) => Err(e),
+			Ok(mut mmr_cursor) => {
+				let mmr_next = mmr_cursor.try_next().await;
+				match mmr_next {
+					Err(e) => Err(e),
+					Ok(mmr_option) => {
+						match mmr_option {
+							Some(mmr_db_object) => {
+								Ok(Some(mmr_db_object.mmr))
+							},
+							None => Ok(None)
+						}
 					}
 				}
 			}
 		}
 	}
-}
-
-pub(crate) async fn write(
-	username: String,
-	mmr: MurmurStore,
-	db: Connection<Db>,
-	options: Option<InsertOneOptions>,
-) -> Result<InsertOneResult, Error>{
-	let murmur_data_object = MurmurDbObject{mmr, username};
-	let mmr_collection: Collection<MurmurDbObject> = db.database(DB_NAME).collection(COLLECTION_NAME);
-	let insert_result = mmr_collection.insert_one(murmur_data_object, options).await;
-	insert_result
+	
+	pub(crate) async fn write(
+		&self,
+		username: String,
+		mmr: MurmurStore,
+		options: Option<InsertOneOptions>,
+	) -> Result<InsertOneResult, Error>{
+		let murmur_data_object = MurmurDbObject{mmr, username};
+		let insert_result = self.col.insert_one(murmur_data_object, options).await;
+		insert_result
+	}
 }
