@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use murmur::BlockNumber;
+use murmur::{BlockNumber, ProxyData};
 use parity_scale_codec::Encode;
 use rocket::http::Status;
 use rocket::response::Responder;
@@ -118,7 +118,7 @@ impl<'a> From<&'a murmur::Proxy> for Proxy {
 
 #[derive(Serialize)]
 pub(crate) struct ExecuteResponse {
-	pub(crate) payload: Payload<Proxy>,
+	pub(crate) proxy_data: ProxyData,
 }
 
 impl<'r> Responder<'r, 'static> for ExecuteResponse {

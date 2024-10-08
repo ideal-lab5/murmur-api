@@ -100,15 +100,14 @@ async fn execute(
 		let store = store::load();
 		let target_block = request.current_block + 1;
 
-		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..])
+		let call = RuntimeCall::decode(&mut &request.runtime_call[..])
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
-		let payload = murmur::prepare_execute(
-			username.into(),
+		let proxy_data = murmur::prepare_execute(
 			seed.into(),
 			target_block,
 			store,
-			runtime_call,
+			&call,
 		)
 		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
