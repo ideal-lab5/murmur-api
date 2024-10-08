@@ -9,6 +9,7 @@ license = "MIT-0"
 
 [dependencies]
 rocket = { version = "0.5.1", features = ["tls", "json"] }
+rocket_cors = "0.6.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bcrypt = "0.10.1"
@@ -17,6 +18,8 @@ serde_cbor = "0.11.2"
 sp-core = { git = "https://github.com/ideal-lab5/polkadot-sdk.git", branch = "testing", features = ["bls-experimental"] }
 subxt-signer = "0.35.2"
 subxt = "0.35.2"
+hex = "0.4.3"
+parity-scale-codec = "3.6.12"
 
 [dependencies.rocket_db_pools]
 version = "0.2.0"

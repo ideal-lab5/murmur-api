@@ -18,117 +18,83 @@
 extern crate rocket;
 
 mod store;
+mod translate;
+mod types;
 mod utils;
 
-use rocket::State;
-use store::Store;
-
-use murmur::{
-	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
-	BlockNumber,
-};
+use murmur::{BlockNumber, RuntimeCall};
+use parity_scale_codec::Decode;
 use rocket::{
-	http::{Cookie, CookieJar, Status},
-	serde::{json::Json, Deserialize},
+	http::{Cookie, CookieJar, Method, SameSite, Status},
+	serde::json::Json,
+	State,
 };
+use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use rocket_db_pools::mongodb::bson::doc;
-use sp_core::crypto::Ss58Codec;
-use std::env;
-use subxt::utils::{AccountId32, MultiAddress};
-use subxt_signer::sr25519::dev;
-use utils::{check_cookie, derive_seed};
+use store::Store;
+use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ExecuteResponse};
+use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
 
-fn get_salt() -> String {
-	env::var("SALT").unwrap_or_else(|_| "0123456789abcdef".to_string())
-}
-
-fn get_ephem_msk() -> [u8; 32] {
-	let ephem_msk_str = env::var("EPHEM_MSK").unwrap_or_else(|_| {
-		"1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1".to_string()
-	});
-	let ephem_msk_vec: Vec<u8> = ephem_msk_str
-		.split(',')
-		.map(|s| s.trim().parse().expect("Invalid integer in EPHEM_MSK"))
-		.collect();
-	let mut ephem_msk = [0u8; 32];
-	for (i, &byte) in ephem_msk_vec.iter().enumerate().take(32) {
-		ephem_msk[i] = byte;
-	}
-	ephem_msk
-}
-
-#[derive(Deserialize)]
-struct LoginRequest {
-	username: String,
-	password: String,
-}
-
-#[derive(Deserialize)]
-struct ExecuteRequest {
-	amount: u128,
-	to: String,
-}
-
-#[derive(Deserialize)]
-struct NewRequest {
-	validity: u32,
-}
-
-#[post("/login", data = "<login_request>")]
-async fn login(login_request: Json<LoginRequest>, cookies: &CookieJar<'_>) -> &'static str {
-	let username = &login_request.username;
-	let password = &login_request.password;
+#[post("/authenticate", data = "<auth_request>")]
+/// Authenticate the user and start a session
+async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) -> &'static str {
+	let username = &auth_request.username;
+	let password = &auth_request.password;
 	let seed = derive_seed(username, password, &get_salt());
 
-	cookies.add(Cookie::new("username", username.clone()));
-	cookies.add(Cookie::new("seed", seed.clone()));
+	let username_cookie = Cookie::build(("username", username.clone()))
+		.path("/")
+		.same_site(SameSite::None)
+		.secure(true);
 
-	"User logged in, session started."
+	let seed_cookie = Cookie::build(("seed", seed.clone()))
+		.path("/")
+		.same_site(SameSite::None)
+		.secure(true);
+
+	cookies.add(username_cookie);
+	cookies.add(seed_cookie);
+
+	"User authenticated, session started."
 }
 
-#[post("/new", data = "<request>")]
-/// Generate a wallet valid for the next {validity} blocks
-async fn new(
+#[post("/create", data = "<request>")]
+/// Prepare and return the data needed to create a wallet
+/// valid for the next {request.validity} blocks
+async fn create(
 	cookies: &CookieJar<'_>,
-	request: Json<NewRequest>,
+	request: Json<CreateRequest>,
 	db: &State<Store>,
-) -> Result<String, Status> {
+) -> Result<CreateResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		let (client, current_block_number, round_pubkey_bytes) =
-			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+		let round_pubkey_bytes = translate::pubkey_to_bytes(&request.round_pubkey)
+			.map_err(|e| (Status::BadRequest, format!("`request.round_pubkey`: {:?}", e)))?;
 
 		// 1. prepare block schedule
 		let mut schedule: Vec<BlockNumber> = Vec::new();
 		for i in 2..request.validity + 2 {
 			// wallet is 'active' in 2 blocks
-			let next_block_number: BlockNumber = current_block_number + i;
-			schedule.push(next_block_number);
+			let next_block: BlockNumber = request.current_block + i;
+			schedule.push(next_block);
 		}
 
 		// 2. create mmr
-		let (call, mmr_store) = murmur::create(
+		let (payload, store) = murmur::create(
 			username.into(),
 			seed.into(),
 			get_ephem_msk(), // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
 			schedule,
 			round_pubkey_bytes,
 		)
-		.map_err(|_| Status::InternalServerError)?;
+		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
 		// 3. add to storage
-		let username_string: String = username.into();
-		db.write(username_string, mmr_store.clone(), None)
+		db.write(username.into(), store.clone())
 			.await
-			.map_err(|_| Status::InternalServerError)?;
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
-		// sign and send the call
-		let from = dev::alice();
-		client
-			.tx()
-			.sign_and_submit_then_watch_default(&call, &from)
-			.await
-			.map_err(|_| Status::InternalServerError)?;
-		Ok("MMR proxy account creation successful!".to_string())
+		// 4. return the call data
+		Ok(CreateResponse { payload: payload.into() })
 	})
 	.await
 }
@@ -139,45 +105,31 @@ async fn execute(
 	cookies: &CookieJar<'_>,
 	request: Json<ExecuteRequest>,
 	db: &State<Store>,
-) -> Result<String, Status> {
+) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		let (client, current_block_number, _) =
-			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
+		let mmr_option = db
+			.load(username.into())
+			.await
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
-		let from_ss58 = sp_core::crypto::AccountId32::from_ss58check(&request.to).unwrap();
+		let store = mmr_option.ok_or((
+			Status::InternalServerError,
+			format!("No Murmur Store for username: {}", username.to_string()),
+		))?;
+		let target_block = request.current_block + 1;
 
-		let bytes: &[u8] = from_ss58.as_ref();
-		let from_ss58_sized: [u8; 32] = bytes.try_into().unwrap();
-		let to = AccountId32::from(from_ss58_sized);
-		let balance_transfer_call = Balances(Call::transfer_allow_death {
-			dest: MultiAddress::<_, u32>::from(to),
-			value: request.amount,
-		});
+		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..])
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
-		let username_string = username.into();
-		let mmr_option =
-			db.load(username_string, None).await.map_err(|_| Status::InternalServerError)?;
-
-		let murmur_store = mmr_option.ok_or(Status::BadRequest)?;
-
-		let target_block_number = current_block_number + 1;
-
-		let tx = murmur::prepare_execute(
+		let payload = murmur::prepare_execute(
 			username.into(),
 			seed.into(),
-			target_block_number,
-			murmur_store,
-			balance_transfer_call,
+			target_block,
+			store,
+			runtime_call,
 		)
-		.map_err(|_| Status::InternalServerError)?;
-
-		// submit the tx using alice to sign it
-		client
-			.tx()
-			.sign_and_submit_then_watch_default(&tx, &dev::alice())
-			.await
-			.map_err(|_| Status::InternalServerError)?;
-		Ok("Transaction executed".to_string())
+		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+		Ok(ExecuteResponse { payload: payload.into() })
 	})
 	.await
 }
@@ -185,5 +137,21 @@ async fn execute(
 #[launch]
 async fn rocket() -> _ {
 	let store = Store::init().await;
-	rocket::build().mount("/", routes![login, new, execute]).manage(store)
+	let cors = CorsOptions::default()
+		.allowed_origins(AllowedOrigins::all())
+		.allowed_methods(
+			vec![Method::Get, Method::Post, Method::Patch]
+				.into_iter()
+				.map(From::from)
+				.collect(),
+		)
+		.allowed_headers(AllowedHeaders::all())
+		.allow_credentials(true)
+		.to_cors()
+		.unwrap();
+
+	rocket::build()
+		.mount("/", routes![authenticate, create, execute])
+		.manage(store)
+		.attach(cors)
 }

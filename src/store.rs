@@ -15,14 +15,13 @@
  */
 
 use murmur::MurmurStore;
-use rocket::futures::TryStreamExt;
-use rocket::serde::{Deserialize, Serialize};
-use rocket_db_pools::mongodb::bson::doc;
-use rocket_db_pools::mongodb::error::Error;
-use rocket_db_pools::mongodb::options::{FindOptions, InsertOneOptions};
-use rocket_db_pools::mongodb::results::InsertOneResult;
-use rocket_db_pools::mongodb::Client;
-use rocket_db_pools::mongodb::Collection;
+use rocket::{
+	futures::TryStreamExt,
+	serde::{Deserialize, Serialize},
+};
+use rocket_db_pools::mongodb::{
+	bson::doc, error::Error, results::InsertOneResult, Client, Collection,
+};
 
 // TODO move to env var https://github.com/ideal-lab5/murmur-api/issues/15
 const DB_NAME: &str = "MurmurDB";
@@ -46,13 +45,9 @@ impl Store {
 		Store { col }
 	}
 
-	pub(crate) async fn load(
-		&self,
-		username: &str,
-		options: Option<FindOptions>,
-	) -> Result<Option<MurmurStore>, Error> {
+	pub(crate) async fn load(&self, username: &str) -> Result<Option<MurmurStore>, Error> {
 		let filter = doc! {"username": username};
-		let mut mmr_cursor = self.col.find(filter, options).await?;
+		let mut mmr_cursor = self.col.find(filter, None).await?;
 
 		let mmr_option = mmr_cursor.try_next().await?;
 		match mmr_option {
@@ -65,10 +60,9 @@ impl Store {
 		&self,
 		username: String,
 		mmr: MurmurStore,
-		options: Option<InsertOneOptions>,
 	) -> Result<InsertOneResult, Error> {
 		let murmur_data_object = MurmurDbObject { mmr, username };
-		let insert_result = self.col.insert_one(murmur_data_object, options).await;
+		let insert_result = self.col.insert_one(murmur_data_object, None).await;
 		insert_result
 	}
 }
