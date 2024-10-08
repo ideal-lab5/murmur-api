@@ -15,6 +15,7 @@
  */
 
 use murmur::BlockNumber;
+use parity_scale_codec::Encode;
 use rocket::http::Status;
 use rocket::response::Responder;
 use rocket::serde::{Deserialize, Serialize};
@@ -98,6 +99,7 @@ pub(crate) struct Proxy {
 	pub ciphertext: Vec<u8>,
 	pub proof: Vec<Vec<u8>>,
 	pub size: u64,
+	pub call: Vec<u8>,
 }
 
 impl<'a> From<&'a murmur::Proxy> for Proxy {
@@ -109,6 +111,7 @@ impl<'a> From<&'a murmur::Proxy> for Proxy {
 			ciphertext: proxy.ciphertext.clone(),
 			proof: proxy.proof.clone(),
 			size: proxy.size,
+			call: proxy.call.as_ref().encode()
 		}
 	}
 }

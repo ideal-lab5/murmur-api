@@ -22,9 +22,7 @@ mod translate;
 mod types;
 mod utils;
 
-use murmur::{
-	BlockNumber, RuntimeCall,
-};
+use murmur::{BlockNumber, RuntimeCall};
 use parity_scale_codec::Decode;
 use rocket::{
 	http::{Cookie, CookieJar, Method, SameSite, Status},
@@ -102,12 +100,9 @@ async fn execute(
 		let store = store::load();
 		let target_block = request.current_block + 1;
 
-		print!("pre decode");
-		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..]).map_err(|e| {
-			print!("decode error {:?}", e);
-			(Status::InternalServerError, e.to_string())
-		})?;
-		print!("post decode {:?}", runtime_call);
+		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..])
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
+
 		let payload = murmur::prepare_execute(
 			username.into(),
 			seed.into(),
