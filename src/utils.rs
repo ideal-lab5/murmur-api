@@ -34,7 +34,7 @@ where
 			let seed = seed_cookie.value();
 			callback(username, seed).await
 		},
-		_ => Err((Status::Forbidden, "Not logged in".to_string())),
+		_ => Err((Status::Forbidden, "Not authenticated".to_string())),
 	}
 }
 
