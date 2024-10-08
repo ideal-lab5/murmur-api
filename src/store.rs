@@ -28,7 +28,6 @@ use crate::Db;
 
 // TODO move to env var https://github.com/ideal-lab5/murmur-api/issues/15
 const DB_NAME: &str = "MurmurDB";
-// const DB_URI: &str = "mongodb+srv://murmurapi:GuVsTAEbQtNnnbPj@useast.m8j6h.mongodb.net/?retryWrites=true&w=majority&appName=USEast";
 const COLLECTION_NAME: &str = "mmrs";
 
 #[derive(Serialize, Deserialize)]
