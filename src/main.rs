@@ -25,15 +25,19 @@ mod utils;
 use murmur::{BlockNumber, RuntimeCall};
 use parity_scale_codec::Decode;
 use rocket::{
-	http::{Cookie, CookieJar, Method, SameSite, Status},
-	serde::json::Json,
-	State,
+	http::{Cookie, CookieJar, Method, SameSite, Status}, serde::json::Json
 };
+use rocket_db_pools::mongodb::Client;
+use rocket_db_pools::Connection;
+use rocket_db_pools::Database;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use rocket_db_pools::mongodb::bson::doc;
-use store::Store;
 use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ExecuteResponse};
 use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
+
+#[derive(Database)]
+#[database("Murmur")]
+struct Db(Client);
 
 #[post("/authenticate", data = "<auth_request>")]
 /// Authenticate the user and start a session
@@ -64,7 +68,7 @@ async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) 
 async fn create(
 	cookies: &CookieJar<'_>,
 	request: Json<CreateRequest>,
-	db: &State<Store>,
+	db: Connection<Db>,
 ) -> Result<CreateResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
 		let round_pubkey_bytes = translate::pubkey_to_bytes(&request.round_pubkey)
@@ -79,7 +83,7 @@ async fn create(
 		}
 
 		// 2. create mmr
-		let (payload, store) = murmur::create(
+		let (payload, mmr_store) = murmur::create(
 			username.into(),
 			seed.into(),
 			get_ephem_msk(), // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
@@ -89,7 +93,7 @@ async fn create(
 		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
 		// 3. add to storage
-		db.write(username.into(), store.clone())
+		store::write(db, username.into(), mmr_store.clone())
 			.await
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
@@ -104,11 +108,10 @@ async fn create(
 async fn execute(
 	cookies: &CookieJar<'_>,
 	request: Json<ExecuteRequest>,
-	db: &State<Store>,
+	db: Connection<Db>,
 ) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		let mmr_option = db
-			.load(username.into())
+		let mmr_option = store::load(db, username.into())
 			.await
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
@@ -136,7 +139,6 @@ async fn execute(
 
 #[launch]
 async fn rocket() -> _ {
-	let store = Store::init().await;
 	let cors = CorsOptions::default()
 		.allowed_origins(AllowedOrigins::all())
 		.allowed_methods(
@@ -152,6 +154,6 @@ async fn rocket() -> _ {
 
 	rocket::build()
 		.mount("/", routes![authenticate, create, execute])
-		.manage(store)
 		.attach(cors)
+		.attach(Db::init())
 }
