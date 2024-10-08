@@ -1009,9 +1009,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.18"
+version = "4.5.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0956a43b323ac1afaffc053ed5c4b7c1f1800bacd1683c353aabbb752515dd3"
+checksum = "7be5744db7978a28d9df86a214130d106a89ce49644cbc4e3f0c22c3fba30615"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -1019,9 +1019,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.18"
+version = "4.5.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d72166dd41634086d5803a47eb71ae740e61d84709c36f3c34110173db3961b"
+checksum = "a5fbc17d3ef8278f55b282b2a2e75ae6f6c7d4bb70ed3d0382375104bfafdb4b"
 dependencies = [
  "anstream",
  "anstyle",
@@ -2740,8 +2740,11 @@ name = "murmur-api"
 version = "0.1.0"
 dependencies = [
  "bcrypt",
+ "hex",
  "murmur-lib",
+ "parity-scale-codec",
  "rocket",
+ "rocket_cors",
  "serde",
  "serde_cbor",
  "serde_json",
@@ -2753,7 +2756,7 @@ dependencies = [
 [[package]]
 name = "murmur-core"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#187a61b11c85831b085b7bb2a3c170c169c11884"
+source = "git+https://github.com/ideal-lab5/murmur.git#54f6b6cee5e518f7774df2e04b47a52cae91e924"
 dependencies = [
  "ark-bls12-377",
  "ark-serialize",
@@ -2772,7 +2775,7 @@ dependencies = [
 [[package]]
 name = "murmur-lib"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#187a61b11c85831b085b7bb2a3c170c169c11884"
+source = "git+https://github.com/ideal-lab5/murmur.git#54f6b6cee5e518f7774df2e04b47a52cae91e924"
 dependencies = [
  "ark-bls12-377",
  "ark-ff",
@@ -2793,6 +2796,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "w3f-bls",
+ "zeroize",
 ]
 
 [[package]]
@@ -3536,6 +3540,23 @@ dependencies = [
  "syn 2.0.77",
  "unicode-xid",
  "version_check",
+]
+
+[[package]]
+name = "rocket_cors"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfac3a1df83f8d4fc96aa41dba3b86c786417b7fc0f52ec76295df2ba781aa69"
+dependencies = [
+ "http 0.2.12",
+ "log",
+ "regex",
+ "rocket",
+ "serde",
+ "serde_derive",
+ "unicase",
+ "unicase_serde",
+ "url",
 ]
 
 [[package]]
@@ -5563,6 +5584,25 @@ checksum = "e1b88fcfe09e89d3866a5c11019378088af2d24c3fbd4f0543f96b479ec90697"
 dependencies = [
  "serde",
  "version_check",
+]
+
+[[package]]
+name = "unicase"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7d2d4dafb69621809a81864c9c1b864479e1235c0dd4e199924b9742439ed89"
+dependencies = [
+ "version_check",
+]
+
+[[package]]
+name = "unicase_serde"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ef53697679d874d69f3160af80bc28de12730a985d57bdf2b47456ccb8b11f1"
+dependencies = [
+ "serde",
+ "unicase",
 ]
 
 [[package]]
