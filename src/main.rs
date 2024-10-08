@@ -123,20 +123,18 @@ async fn new(
 		
 		// 3. add to storage
 		let username_string: String = username.into();
-		let insert_result = db.write(username_string, mmr_store.clone(), None).await;
-		match insert_result {
-			Err(_e) => Err(Status::InternalServerError),
-			Ok(_result) => {
-				// sign and send the call
-				let from = dev::alice();
-				let _events = client
-					.tx()
-					.sign_and_submit_then_watch_default(&call, &from)
-					.await
-					.map_err(|_| Status::InternalServerError)?;
-				Ok("MMR proxy account creation successful!".to_string())
-			}
-		}
+		db.write(username_string, mmr_store.clone(), None)
+			.await
+			.map_err(|_| Status::InternalServerError)?;
+
+		// sign and send the call
+		let from = dev::alice();
+		let _events = client
+			.tx()
+			.sign_and_submit_then_watch_default(&call, &from)
+			.await
+			.map_err(|_| Status::InternalServerError)?;
+		Ok("MMR proxy account creation successful!".to_string())
 	})
 	.await
 }
