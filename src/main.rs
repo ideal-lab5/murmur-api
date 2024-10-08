@@ -59,10 +59,6 @@ fn get_ephem_msk() -> [u8; 32] {
 	ephem_msk
 }
 
-#[derive(Database)]
-#[database("Murmur")]
-struct Db(Client);
-
 #[derive(Deserialize)]
 struct LoginRequest {
 	username: String,
