@@ -53,7 +53,6 @@ impl Store {
 	) -> Result<Option<MurmurStore>, Error> {
 	
 		let filter = doc! {"username": username};
-		// let mmr_collection: Collection<MurmurDbObject> = db.database(&DB_NAME).collection(&COLLECTION_NAME);
 		let cursor_result = self.col.find(filter, options).await;
 	
 		match cursor_result {
