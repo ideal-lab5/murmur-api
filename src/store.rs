@@ -53,24 +53,12 @@ impl Store {
 	) -> Result<Option<MurmurStore>, Error> {
 	
 		let filter = doc! {"username": username};
-		let cursor_result = self.col.find(filter, options).await;
-	
-		match cursor_result {
-			Err(e) => Err(e),
-			Ok(mut mmr_cursor) => {
-				let mmr_next = mmr_cursor.try_next().await;
-				match mmr_next {
-					Err(e) => Err(e),
-					Ok(mmr_option) => {
-						match mmr_option {
-							Some(mmr_db_object) => {
-								Ok(Some(mmr_db_object.mmr))
-							},
-							None => Ok(None)
-						}
-					}
-				}
-			}
+		let mut mmr_cursor = self.col.find(filter, options).await?;
+
+		let mmr_option = mmr_cursor.try_next().await?;
+		match mmr_option {
+			Some(mmr_db_object) => Ok(Some(mmr_db_object.mmr)),
+			None => Ok(None),
 		}
 	}
 	
