@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-use rocket::futures::TryStreamExt;
-use rocket_db_pools::mongodb::options::{FindOptions, InsertOneOptions};
-use rocket_db_pools::mongodb::Client;
-use rocket_db_pools::mongodb::error::Error;
-use rocket_db_pools::mongodb::bson::doc;
-use rocket_db_pools::mongodb::results::InsertOneResult;
-use rocket_db_pools::mongodb::Collection;
-use rocket::serde::{Deserialize, Serialize};
-
-
 use murmur::MurmurStore;
+use rocket::futures::TryStreamExt;
+use rocket::serde::{Deserialize, Serialize};
+use rocket_db_pools::mongodb::bson::doc;
+use rocket_db_pools::mongodb::error::Error;
+use rocket_db_pools::mongodb::options::{FindOptions, InsertOneOptions};
+use rocket_db_pools::mongodb::results::InsertOneResult;
+use rocket_db_pools::mongodb::Client;
+use rocket_db_pools::mongodb::Collection;
+
+// TODO move to env var https://github.com/ideal-lab5/murmur-api/issues/15
 const DB_NAME: &str = "MurmurDB";
 const DB_URI: &str = "mongodb+srv://murmurapi:GuVsTAEbQtNnnbPj@useast.m8j6h.mongodb.net/?retryWrites=true&w=majority&appName=USEast";
 const COLLECTION_NAME: &str = "mmrs";
 
-#[derive (Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct MurmurDbObject {
 	pub mmr: MurmurStore,
-	pub username: String
+	pub username: String,
 }
 
 pub(crate) struct Store {
@@ -51,7 +51,6 @@ impl Store {
 		username: &str,
 		options: Option<FindOptions>,
 	) -> Result<Option<MurmurStore>, Error> {
-	
 		let filter = doc! {"username": username};
 		let mut mmr_cursor = self.col.find(filter, options).await?;
 
@@ -61,14 +60,14 @@ impl Store {
 			None => Ok(None),
 		}
 	}
-	
+
 	pub(crate) async fn write(
 		&self,
 		username: String,
 		mmr: MurmurStore,
 		options: Option<InsertOneOptions>,
-	) -> Result<InsertOneResult, Error>{
-		let murmur_data_object = MurmurDbObject{mmr, username};
+	) -> Result<InsertOneResult, Error> {
+		let murmur_data_object = MurmurDbObject { mmr, username };
 		let insert_result = self.col.insert_one(murmur_data_object, options).await;
 		insert_result
 	}

@@ -20,20 +20,18 @@ extern crate rocket;
 mod store;
 mod utils;
 
-use store::Store;
 use rocket::State;
+use store::Store;
 
 use murmur::{
 	etf::{balances::Call, runtime_types::node_template_runtime::RuntimeCall::Balances},
-	BlockNumber
+	BlockNumber,
 };
 use rocket::{
 	http::{Cookie, CookieJar, Status},
 	serde::{json::Json, Deserialize},
 };
-use rocket_db_pools::{
-	mongodb::{bson::doc, Client}, Database,
-};
+use rocket_db_pools::mongodb::bson::doc;
 use sp_core::crypto::Ss58Codec;
 use std::env;
 use subxt::utils::{AccountId32, MultiAddress};
@@ -98,7 +96,7 @@ async fn new(
 	check_cookie(cookies, |username, seed| async {
 		let (client, current_block_number, round_pubkey_bytes) =
 			murmur::idn_connect().await.map_err(|_| Status::InternalServerError)?;
-			
+
 		// 1. prepare block schedule
 		let mut schedule: Vec<BlockNumber> = Vec::new();
 		for i in 2..request.validity + 2 {
@@ -116,7 +114,7 @@ async fn new(
 			round_pubkey_bytes,
 		)
 		.map_err(|_| Status::InternalServerError)?;
-		
+
 		// 3. add to storage
 		let username_string: String = username.into();
 		db.write(username_string, mmr_store.clone(), None)
@@ -125,7 +123,7 @@ async fn new(
 
 		// sign and send the call
 		let from = dev::alice();
-		let _events = client
+		client
 			.tx()
 			.sign_and_submit_then_watch_default(&call, &from)
 			.await
@@ -157,34 +155,29 @@ async fn execute(
 		});
 
 		let username_string = username.into();
-		let query_result = db.load(username_string, None).await;
+		let mmr_option =
+			db.load(username_string, None).await.map_err(|_| Status::InternalServerError)?;
 
-		match query_result {
-			Err(_e) => Err(Status::InternalServerError),
-			Ok(mmr_option) => {
-				match mmr_option {
-					Some(murmur_store) => {
+		let murmur_store = mmr_option.ok_or(Status::BadRequest)?;
 
-						let target_block_number = current_block_number + 1;
+		let target_block_number = current_block_number + 1;
 
-						let tx = murmur::prepare_execute(
-							username.into(),
-							seed.into(),
-							target_block_number,
-							murmur_store,
-							balance_transfer_call,
-						)
-						.map_err(|_| Status::InternalServerError)?;
-						// submit the tx using alice to sign it
-						let _ = client.tx().sign_and_submit_then_watch_default(&tx, &dev::alice()).await;
-						Ok("Transaction executed".to_string())
-					},
-					None => {
-						Err(Status::BadRequest)
-					}
-				}
-			}
-		}		
+		let tx = murmur::prepare_execute(
+			username.into(),
+			seed.into(),
+			target_block_number,
+			murmur_store,
+			balance_transfer_call,
+		)
+		.map_err(|_| Status::InternalServerError)?;
+
+		// submit the tx using alice to sign it
+		client
+			.tx()
+			.sign_and_submit_then_watch_default(&tx, &dev::alice())
+			.await
+			.map_err(|_| Status::InternalServerError)?;
+		Ok("Transaction executed".to_string())
 	})
 	.await
 }
