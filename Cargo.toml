@@ -20,6 +20,7 @@ subxt-signer = "0.35.2"
 subxt = "0.35.2"
 hex = "0.4.3"
 parity-scale-codec = "3.6.12"
+dotenv = "0.15.0"
 
 [dependencies.rocket_db_pools]
 version = "0.2.0"

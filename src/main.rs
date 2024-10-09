@@ -22,6 +22,7 @@ mod translate;
 mod types;
 mod utils;
 
+use dotenv::dotenv;
 use murmur::{BlockNumber, RuntimeCall};
 use parity_scale_codec::Decode;
 use rocket::{
@@ -31,16 +32,17 @@ use rocket::{
 };
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use rocket_db_pools::mongodb::bson::doc;
+use std::env;
 use store::Store;
 use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ExecuteResponse};
-use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
+use utils::{check_cookie, derive_seed, MurmurError};
 
 #[post("/authenticate", data = "<auth_request>")]
 /// Authenticate the user and start a session
 async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) -> &'static str {
 	let username = &auth_request.username;
 	let password = &auth_request.password;
-	let seed = derive_seed(username, password, &get_salt());
+	let seed = derive_seed(username, password, &env::var("SALT").unwrap());
 
 	let username_cookie = Cookie::build(("username", username.clone()))
 		.path("/")
@@ -82,7 +84,7 @@ async fn create(
 		let (payload, store) = murmur::create(
 			username.into(),
 			seed.into(),
-			get_ephem_msk(), // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
+			translate::str_to_bytes(&env::var("EPHEM_MSK").unwrap()), // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
 			schedule,
 			round_pubkey_bytes,
 		)
@@ -107,20 +109,19 @@ async fn execute(
 	db: &State<Store>,
 ) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
+		println!("Executing transaction for user");
 		let mmr_option = db
 			.load(username.into())
 			.await
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
-
-		let store = mmr_option.ok_or((
-			Status::InternalServerError,
-			format!("No Murmur Store for username: {}", username.to_string()),
-		))?;
+		println!("mmr_option: ");
+		let store = mmr_option
+			.ok_or((Status::InternalServerError, format!("No Murmur Store for username")))?;
 		let target_block = request.current_block + 1;
-
+		println!("target_block: ");
 		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..])
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
-
+		println!("runtime_call:");
 		let payload = murmur::prepare_execute(
 			username.into(),
 			seed.into(),
@@ -129,6 +130,7 @@ async fn execute(
 			runtime_call,
 		)
 		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+		println!("payload: ");
 		Ok(ExecuteResponse { payload: payload.into() })
 	})
 	.await
@@ -136,6 +138,7 @@ async fn execute(
 
 #[launch]
 async fn rocket() -> _ {
+	dotenv().ok();
 	let store = Store::init().await;
 	let cors = CorsOptions::default()
 		.allowed_origins(AllowedOrigins::all())
