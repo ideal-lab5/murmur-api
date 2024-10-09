@@ -2467,6 +2467,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "impl-codec"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b67aa010c1e3da95bf151bd8b4c059b2ed7e75387cdb969b4f8f2723a43f9941"
+dependencies = [
+ "parity-scale-codec",
+]
+
+[[package]]
+name = "impl-num-traits"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "803d15461ab0dcc56706adf266158acbc44ccf719bf7d0af30705f58b90a4b8c"
+dependencies = [
+ "integer-sqrt",
+ "num-traits",
+ "uint 0.10.0",
+]
+
+[[package]]
 name = "impl-serde"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3032,7 +3052,7 @@ dependencies = [
 [[package]]
 name = "murmur-core"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#54f6b6cee5e518f7774df2e04b47a52cae91e924"
+source = "git+https://github.com/ideal-lab5/murmur.git#7365f012414e7937b3472e9ab45fcc83b68838b3"
 dependencies = [
  "ark-bls12-377",
  "ark-serialize",
@@ -3051,7 +3071,7 @@ dependencies = [
 [[package]]
 name = "murmur-lib"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#54f6b6cee5e518f7774df2e04b47a52cae91e924"
+source = "git+https://github.com/ideal-lab5/murmur.git#7365f012414e7937b3472e9ab45fcc83b68838b3"
 dependencies = [
  "ark-bls12-377",
  "ark-ff",
@@ -3521,10 +3541,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b34d9fd68ae0b74a41b21c03c2f62847aa0ffea044eee893b4c140b37e244e2"
 dependencies = [
  "fixed-hash",
- "impl-codec",
+ "impl-codec 0.6.0",
  "impl-serde",
  "scale-info",
- "uint",
+ "uint 0.9.5",
+]
+
+[[package]]
+name = "primitive-types"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d15600a7d856470b7d278b3fe0e311fe28c2526348549f8ef2ff7db3299c87f5"
+dependencies = [
+ "fixed-hash",
+ "impl-codec 0.7.0",
+ "impl-num-traits",
+ "uint 0.10.0",
 ]
 
 [[package]]
@@ -4119,7 +4151,7 @@ checksum = "afc79ba56a1c742f5aeeed1f1801f3edf51f7e818f0a54582cac6f131364ea7b"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.12.2",
  "scale-bits",
  "scale-decode-derive",
  "scale-type-resolver",
@@ -4146,7 +4178,7 @@ checksum = "628800925a33794fb5387781b883b5e14d130fece9af5a63613867b8de07c5c7"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.12.2",
  "scale-bits",
  "scale-encode-derive",
  "scale-type-resolver",
@@ -4885,7 +4917,7 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot",
  "paste",
- "primitive-types",
+ "primitive-types 0.12.2",
  "rand",
  "scale-info",
  "schnorrkel",
@@ -4909,7 +4941,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -4976,7 +5008,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4996,7 +5028,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -5112,7 +5144,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "polkavm-derive",
- "primitive-types",
+ "primitive-types 0.12.2",
  "sp-externalities 0.25.0 (git+https://github.com/ideal-lab5/polkadot-sdk.git?branch=testing)",
  "sp-runtime-interface-proc-macro 17.0.0 (git+https://github.com/ideal-lab5/polkadot-sdk.git?branch=testing)",
  "sp-std 14.0.0 (git+https://github.com/ideal-lab5/polkadot-sdk.git?branch=testing)",
@@ -5125,13 +5157,13 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "polkavm-derive",
- "primitive-types",
+ "primitive-types 0.13.1",
  "sp-externalities 0.25.0 (git+https://github.com/paritytech/polkadot-sdk)",
  "sp-runtime-interface-proc-macro 17.0.0 (git+https://github.com/paritytech/polkadot-sdk)",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk)",
@@ -5157,7 +5189,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "Inflector",
  "expander",
@@ -5195,7 +5227,7 @@ source = "git+https://github.com/ideal-lab5/polkadot-sdk.git?branch=testing#0bd1
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 
 [[package]]
 name = "sp-storage"
@@ -5212,7 +5244,7 @@ dependencies = [
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -5235,7 +5267,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -5307,7 +5339,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#c482333560b1d0372824f29c5b85fad5d45f281d"
+source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
 dependencies = [
  "anyhow",
  "impl-trait-for-tuples",
@@ -5465,7 +5497,7 @@ dependencies = [
  "instant",
  "jsonrpsee",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.12.2",
  "scale-bits",
  "scale-decode",
  "scale-encode",
@@ -6042,6 +6074,18 @@ name = "uint"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76f64bba2c53b04fcab63c01a7d7427eadc821e3bc48c34dc9ba29c501164b52"
+dependencies = [
+ "byteorder",
+ "crunchy",
+ "hex",
+ "static_assertions",
+]
+
+[[package]]
+name = "uint"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "909988d098b2f738727b161a106cfc7cab00c539c2687a8836f8e565976fb53e"
 dependencies = [
  "byteorder",
  "crunchy",
