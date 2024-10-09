@@ -97,7 +97,7 @@ async fn create(
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
 		// 4. return the call data
-		Ok(CreateResponse { create_data })
+		Ok(CreateResponse { create_data, username: username.into() })
 	})
 	.await
 }
