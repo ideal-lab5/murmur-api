@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-
+use crate::Db;
 use murmur::MurmurStore;
 use rocket::{
-	futures::TryStreamExt, serde::{Deserialize, Serialize}
+	futures::TryStreamExt,
+	serde::{Deserialize, Serialize},
 };
 use rocket_db_pools::mongodb::{
-	bson::doc, error::Error, results::InsertOneResult, Cursor
+	bson::doc, error::Error, results::InsertOneResult, Collection, Cursor,
 };
-use rocket_db_pools::Connection;
-use rocket_db_pools::mongodb::Collection;
-use crate::Db;
+
+pub use rocket_db_pools::{mongodb::Client, Connection, Database};
 
 // TODO move to env var https://github.com/ideal-lab5/murmur-api/issues/15
 const DB_NAME: &str = "MurmurDB";
@@ -38,9 +38,10 @@ pub struct MurmurDbObject {
 
 pub(crate) async fn load(db: Connection<Db>, username: &str) -> Result<Option<MurmurStore>, Error> {
 	let filter = doc! {"username": username};
-	let mmr_collection:Collection<MurmurDbObject> = db.database(&DB_NAME).collection(&COLLECTION_NAME);
-	let mut mmr_cursor:Cursor<MurmurDbObject> = mmr_collection.find(filter, None).await?;
-	let mmr_option:Option<MurmurDbObject> = mmr_cursor.try_next().await?;
+	let mmr_collection: Collection<MurmurDbObject> =
+		db.database(&DB_NAME).collection(&COLLECTION_NAME);
+	let mut mmr_cursor: Cursor<MurmurDbObject> = mmr_collection.find(filter, None).await?;
+	let mmr_option: Option<MurmurDbObject> = mmr_cursor.try_next().await?;
 	match mmr_option {
 		Some(mmr_db_object) => Ok(Some(mmr_db_object.mmr)),
 		None => Ok(None),
@@ -51,9 +52,10 @@ pub(crate) async fn write(
 	username: String,
 	mmr: MurmurStore,
 ) -> Result<InsertOneResult, Error> {
-	let murmur_data_object:MurmurDbObject = MurmurDbObject { mmr, username };
-	let mmr_collection: Collection<MurmurDbObject> = db.database(&DB_NAME).collection(&COLLECTION_NAME);
-	let insert_result: Result<InsertOneResult, Error> = mmr_collection.insert_one(murmur_data_object, None).await;
+	let murmur_data_object: MurmurDbObject = MurmurDbObject { mmr, username };
+	let mmr_collection: Collection<MurmurDbObject> =
+		db.database(&DB_NAME).collection(&COLLECTION_NAME);
+	let insert_result: Result<InsertOneResult, Error> =
+		mmr_collection.insert_one(murmur_data_object, None).await;
 	insert_result
 }
-
