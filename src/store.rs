@@ -14,20 +14,103 @@
  * limitations under the License.
  */
 
+use hex::decode;
 use murmur::MurmurStore;
-use std::fs::File;
+use parity_scale_codec::{Decode, Encode};
+use rocket::{
+	futures::TryStreamExt,
+	serde::{Deserialize, Serialize},
+};
+use rocket_db_pools::mongodb::{
+	bson::doc, error::Error as DbError, options::UpdateOptions, results::UpdateResult, Client,
+	Collection,
+};
+use std::env;
+use std::fmt::Display;
 
-pub(crate) fn load() -> MurmurStore {
-	// TODO: load from DB
-	let mmr_store_file = File::open("mmr_store").expect("Unable to open file");
-	let data: MurmurStore = serde_cbor::from_reader(mmr_store_file).unwrap();
-
-	data
+#[derive(Serialize, Deserialize)]
+pub struct MurmurDbObject {
+	pub mmr: String,
+	pub username: String,
 }
 
-/// Write the MMR data to a file
-pub(crate) fn write(mmr_store: MurmurStore) {
-	// TODO: write to DB
-	let mmr_store_file = File::create("mmr_store").expect("It should create the file");
-	serde_cbor::to_writer(mmr_store_file, &mmr_store).unwrap();
+pub(crate) struct Store {
+	pub(crate) col: Collection<MurmurDbObject>,
+}
+
+pub enum Error {
+	/// Db error
+	Db(DbError),
+	Hex(hex::FromHexError),
+	Codec(parity_scale_codec::Error),
+}
+
+impl Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Error::Db(e) => write!(f, "Db error: {}", e),
+			Error::Hex(e) => write!(f, "Hex error: {}", e),
+			Error::Codec(e) => write!(f, "Codec error: {}", e),
+		}
+	}
+}
+
+impl From<DbError> for Error {
+	fn from(e: DbError) -> Self {
+		Error::Db(e)
+	}
+}
+
+impl From<hex::FromHexError> for Error {
+	fn from(e: hex::FromHexError) -> Self {
+		Error::Hex(e)
+	}
+}
+
+impl From<parity_scale_codec::Error> for Error {
+	fn from(e: parity_scale_codec::Error) -> Self {
+		Error::Codec(e)
+	}
+}
+
+impl Store {
+	pub(crate) async fn init() -> Self {
+		let client = Client::with_uri_str(env::var("DB_URI").unwrap()).await.unwrap();
+		let col = client
+			.database(&env::var("DB_NAME").unwrap())
+			.collection(&env::var("DB_COLLECTION").unwrap());
+		Store { col }
+	}
+
+	pub(crate) async fn load(&self, username: &str) -> Result<Option<MurmurStore>, Error> {
+		let filter = doc! {"username": username};
+		let mut mmr_cursor = self.col.find(filter, None).await?;
+
+		let mmr_option = mmr_cursor.try_next().await?;
+		match mmr_option {
+			Some(mmr_db_object) => {
+				let mmr_vec = decode(mmr_db_object.mmr)?;
+				let mmr_store = MurmurStore::decode(&mut mmr_vec.as_slice())?;
+				Ok(Some(mmr_store))
+			},
+			None => Ok(None),
+		}
+	}
+
+	pub(crate) async fn write(
+		&self,
+		username: String,
+		mmr: MurmurStore,
+	) -> Result<UpdateResult, Error> {
+		let mmr_encoded = hex::encode(MurmurStore::encode(&mmr));
+		let murmur_data_object = MurmurDbObject { mmr: mmr_encoded, username: username.clone() };
+
+		let filter = doc! { "username": &username };
+		let update = doc! { "$set": { "mmr": &murmur_data_object.mmr, "username": &murmur_data_object.username } };
+		let options = UpdateOptions::builder().upsert(true).build();
+
+		let insert_result: rocket_db_pools::mongodb::results::UpdateResult =
+			self.col.update_one(filter, update, options).await?;
+		Ok(insert_result)
+	}
 }
