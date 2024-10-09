@@ -20,3 +20,6 @@ subxt-signer = "0.35.2"
 subxt = "0.35.2"
 hex = "0.4.3"
 parity-scale-codec = "3.6.12"
+
+[dev-dependencies]
+murmur-test-utils = { git = "https://github.com/ideal-lab5/murmur.git" }

@@ -22,19 +22,19 @@ use rocket::serde::{Deserialize, Serialize};
 use rocket::{Request, Response};
 use std::io::Cursor;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub(crate) struct AuthRequest {
 	pub(crate) username: String,
 	pub(crate) password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub(crate) struct ExecuteRequest {
 	pub(crate) runtime_call: Vec<u8>,
 	pub(crate) current_block: BlockNumber,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub(crate) struct CreateRequest {
 	pub(crate) validity: u32,
 	pub(crate) current_block: BlockNumber,

@@ -63,9 +63,9 @@ async fn create(
 	request: Json<CreateRequest>,
 ) -> Result<CreateResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
+
 		let round_pubkey_bytes = translate::pubkey_to_bytes(&request.round_pubkey)
 			.map_err(|e| (Status::BadRequest, format!("`request.round_pubkey`: {:?}", e)))?;
-
 		// 1. prepare block schedule
 		let mut schedule: Vec<BlockNumber> = Vec::new();
 		for i in 2..request.validity + 2 {
@@ -133,4 +133,106 @@ fn rocket() -> _ {
 		.unwrap();
 
 	rocket::build().mount("/", routes![authenticate, create, execute]).attach(cors)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use rocket::{http::Cookie, local::asynchronous::Client};
+	use murmur_test_utils::get_dummy_beacon_pubkey;
+
+	#[rocket::async_test]
+	async fn test_authenticate_with_cookie() {
+		let rocket = rocket::build().mount("/", routes![authenticate]);
+		let client = Client::tracked(rocket).await.expect("valid rocket instance");
+
+		let req = client
+			.post("/authenticate")
+			.json(&AuthRequest {
+				username: "test_user".to_string(),
+				password: "test_pass".to_string(),
+			})
+			.cookie(Cookie::new("session", "valid_session"));
+
+		let response = req.dispatch().await;
+
+		let username_cookie =
+			response.cookies().get("username").expect("username cookie should be present");
+		assert_eq!(username_cookie.value(), "test_user");
+		assert_eq!(username_cookie.path(), Some("/"));
+		assert!(username_cookie.http_only().is_none()); // Optional: Check if the cookie is not HttpOnly
+		assert!(username_cookie.secure().unwrap()); // Ensure the Secure flag is true
+		assert_eq!(username_cookie.same_site(), Some(SameSite::None));
+
+		let seed_cookie = response.cookies().get("seed").expect("seed cookie should be present");
+		assert!(seed_cookie.value().len() > 0);
+		assert_eq!(seed_cookie.path(), Some("/"));
+		assert!(seed_cookie.secure().unwrap()); // Ensure the Secure flag is true
+		assert_eq!(seed_cookie.same_site(), Some(SameSite::None));
+
+		// Assert that the user is authenticated
+		assert_eq!(response.into_string().await.unwrap(), "User authenticated, session started.");
+	}
+
+	#[rocket::async_test]
+	async fn test_create_wallet() {
+		let rocket = rocket::build().mount("/", routes![create]);
+		let client = Client::tracked(rocket).await.expect("valid rocket instance");
+
+		let dummy_pk_bytes: Vec<u8> = get_dummy_beacon_pubkey();
+		let pk_hex_string = hex::encode(&dummy_pk_bytes);
+
+		let create_request = CreateRequest {
+			round_pubkey: pk_hex_string,
+			current_block: 1,
+			validity: 1,
+		};
+
+		let req = client
+			.post("/create")
+			.cookie(Cookie::new("username", "valid_session"))
+			.cookie(Cookie::new("seed", "valid_seed"))
+			.json(&create_request);
+
+		let response = req.dispatch().await;
+		assert_eq!(response.status(), Status::Ok);
+	}
+
+	#[rocket::async_test]
+	async fn test_create_and_execute_is_valid() {
+		let rocket = rocket::build().mount("/", routes![create, execute]);
+		let client = Client::tracked(rocket).await.expect("valid rocket instance");
+
+		let dummy_pk_bytes: Vec<u8> = get_dummy_beacon_pubkey();
+		let pk_hex_string = hex::encode(&dummy_pk_bytes);
+
+		let create_request = CreateRequest {
+			round_pubkey: pk_hex_string,
+			current_block: 1,
+			validity: 1,
+		};
+
+		let req = client
+			.post("/create")
+			.cookie(Cookie::new("username", "valid_session"))
+			.cookie(Cookie::new("seed", "valid_seed"))
+			.json(&create_request);
+
+		let response = req.dispatch().await;
+		assert_eq!(response.status(), Status::Ok);
+
+		let execute_request = ExecuteRequest {
+			runtime_call: vec![0,0,4,4],
+			current_block: 1,
+		};
+
+		let execute_req = client
+			.post("/execute")
+			.cookie(Cookie::new("username", "valid_session"))
+			.cookie(Cookie::new("seed", "valid_seed"))
+			.json(&execute_request);
+
+		let execute_res = execute_req.dispatch().await;
+		assert_eq!(execute_res.status(), Status::Ok);
+	}
 }
