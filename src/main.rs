@@ -62,7 +62,7 @@ async fn create(
 	cookies: &CookieJar<'_>,
 	request: Json<CreateRequest>,
 ) -> Result<CreateResponse, (Status, String)> {
-	check_cookie(cookies, |username, seed| async {
+	check_cookie(cookies, |_username, seed| async {
 		let round_pubkey_bytes = translate::pubkey_to_bytes(&request.round_pubkey)
 			.map_err(|e| (Status::BadRequest, format!("`request.round_pubkey`: {:?}", e)))?;
 
@@ -74,8 +74,7 @@ async fn create(
 			schedule.push(next_block);
 		}
 		// 2. create mmr
-		let (payload, store) = murmur::create(
-			username.into(),
+		let create_data = murmur::create(
 			seed.into(),
 			get_ephem_msk(), // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
 			schedule,
@@ -83,9 +82,9 @@ async fn create(
 		)
 		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 		// 3. add to storage
-		store::write(store.clone());
+		store::write(create_data.mmr_store.clone());
 		// 4. return the call data
-		Ok(CreateResponse { payload: payload.into() })
+		Ok(CreateResponse { create_data })
 	})
 	.await
 }
@@ -103,15 +102,10 @@ async fn execute(
 		let call = RuntimeCall::decode(&mut &request.runtime_call[..])
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
-		let proxy_data = murmur::prepare_execute(
-			seed.into(),
-			target_block,
-			store,
-			&call,
-		)
-		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+		let proxy_data = murmur::prepare_execute(seed.into(), target_block, store, &call)
+			.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
-		Ok(ExecuteResponse { payload: payload.into() })
+		Ok(ExecuteResponse { username: username.to_string(), proxy_data })
 	})
 	.await
 }
