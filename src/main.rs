@@ -22,22 +22,27 @@ mod translate;
 mod types;
 mod utils;
 
+use dotenv::dotenv;
 use murmur::{BlockNumber, RuntimeCall};
 use parity_scale_codec::Decode;
 use rocket::{
 	http::{Cookie, CookieJar, Method, SameSite, Status},
 	serde::json::Json,
+	State,
 };
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
+use rocket_db_pools::mongodb::bson::doc;
+use std::env;
+use store::Store;
 use types::{AuthRequest, CreateRequest, CreateResponse, ExecuteRequest, ExecuteResponse};
-use utils::{check_cookie, derive_seed, get_ephem_msk, get_salt, MurmurError};
+use utils::{check_cookie, derive_seed, MurmurError};
 
 #[post("/authenticate", data = "<auth_request>")]
 /// Authenticate the user and start a session
 async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) -> &'static str {
 	let username = &auth_request.username;
 	let password = &auth_request.password;
-	let seed = derive_seed(username, password, &get_salt());
+	let seed = derive_seed(username, password, &env::var("SALT").unwrap());
 
 	let username_cookie = Cookie::build(("username", username.clone()))
 		.path("/")
@@ -61,6 +66,7 @@ async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) 
 async fn create(
 	cookies: &CookieJar<'_>,
 	request: Json<CreateRequest>,
+	db: &State<Store>,
 ) -> Result<CreateResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
 		let round_pubkey_bytes = translate::pubkey_to_bytes(&request.round_pubkey)
@@ -73,17 +79,19 @@ async fn create(
 			let next_block: BlockNumber = request.current_block + i;
 			schedule.push(next_block);
 		}
+
 		// 2. create mmr
-		let (payload, store) = murmur::create(
-			username.into(),
-			seed.into(),
-			get_ephem_msk(), // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
-			schedule,
-			round_pubkey_bytes,
-		)
-		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+		let ephem_msk = translate::str_to_bytes(&env::var("EPHEM_MSK").unwrap())
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?; // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
+		let (payload, store) =
+			murmur::create(username.into(), seed.into(), ephem_msk, schedule, round_pubkey_bytes)
+				.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+
 		// 3. add to storage
-		store::write(store.clone());
+		db.write(username.into(), store.clone())
+			.await
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
+
 		// 4. return the call data
 		Ok(CreateResponse { payload: payload.into() })
 	})
@@ -95,14 +103,22 @@ async fn create(
 async fn execute(
 	cookies: &CookieJar<'_>,
 	request: Json<ExecuteRequest>,
+	db: &State<Store>,
 ) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		let store = store::load();
+		println!("Executing transaction for user");
+		let mmr_option = db
+			.load(username.into())
+			.await
+			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
+		println!("mmr_option: ");
+		let store = mmr_option
+			.ok_or((Status::InternalServerError, format!("No Murmur Store for username")))?;
 		let target_block = request.current_block + 1;
-
+		println!("target_block: ");
 		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..])
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
-
+		println!("runtime_call:");
 		let payload = murmur::prepare_execute(
 			username.into(),
 			seed.into(),
@@ -111,14 +127,16 @@ async fn execute(
 			runtime_call,
 		)
 		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
-
+		println!("payload: ");
 		Ok(ExecuteResponse { payload: payload.into() })
 	})
 	.await
 }
 
 #[launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
+	dotenv().ok();
+	let store = Store::init().await;
 	let cors = CorsOptions::default()
 		.allowed_origins(AllowedOrigins::all())
 		.allowed_methods(
@@ -132,5 +150,8 @@ fn rocket() -> _ {
 		.to_cors()
 		.unwrap();
 
-	rocket::build().mount("/", routes![authenticate, create, execute]).attach(cors)
+	rocket::build()
+		.mount("/", routes![authenticate, create, execute])
+		.manage(store)
+		.attach(cors)
 }
