@@ -125,7 +125,7 @@ async fn execute(
 		let proxy_data = murmur::prepare_execute(seed.into(), target_block, store, &call)
 			.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
-		Ok(ExecuteResponse { username: username.to_string(), proxy_data })
+		Ok(ExecuteResponse { username: username.into(), proxy_data })
 	})
 	.await
 }

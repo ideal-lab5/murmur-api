@@ -59,7 +59,7 @@ impl<'r> Responder<'r, 'static> for CreateResponse {
 
 #[derive(Serialize)]
 pub(crate) struct ExecuteResponse {
-	pub(crate) username: String,
+	pub(crate) username: Vec<u8>,
 	pub(crate) proxy_data: ProxyData,
 }
 
