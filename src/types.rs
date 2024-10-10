@@ -42,8 +42,8 @@ pub(crate) struct CreateRequest {
 
 #[derive(Serialize)]
 pub(crate) struct CreateResponse {
-	pub(crate) create_data: CreateData,
 	pub(crate) username: Vec<u8>,
+	pub(crate) create_data: CreateData,
 }
 
 impl<'r> Responder<'r, 'static> for CreateResponse {
