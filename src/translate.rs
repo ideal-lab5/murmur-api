@@ -15,7 +15,7 @@
  */
 
 pub(crate) fn pubkey_to_bytes(pubkey: &str) -> Result<Vec<u8>, String> {
-	let pubkey = if pubkey.starts_with("0x") { &pubkey[2..] } else { pubkey };
+	let pubkey = if let Some(stripped) = pubkey.strip_prefix("0x") { stripped } else { pubkey };
 
 	let round_pubkey_bytes =
 		hex::decode(pubkey).map_err(|_| format!("Wrong input `{:?}`", pubkey))?;
@@ -26,7 +26,11 @@ pub(crate) fn pubkey_to_bytes(pubkey: &str) -> Result<Vec<u8>, String> {
 pub(crate) fn str_to_bytes(input: &str) -> Result<[u8; 32], &str> {
 	let vec: Vec<u8> = input
 		.split(',')
-		.map(|s| s.trim().parse().expect(&format!("Invalid integer in input {}", input)))
+		.map(|s| {
+			s.trim()
+				.parse()
+				.unwrap_or_else(|_| panic!("Invalid integer in input {}", input))
+		})
 		.collect();
 	let sized: [u8; 32] = vec.try_into().map_err(|_| "Vector length is not 32")?;
 	Ok(sized)

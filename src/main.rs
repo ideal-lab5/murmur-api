@@ -106,12 +106,12 @@ async fn execute(
 ) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
 		let mmr_option = db
-			.load(username.into())
+			.load(username)
 			.await
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
 		let store = mmr_option
-			.ok_or((Status::InternalServerError, format!("No Murmur Store for username")))?;
+			.ok_or((Status::InternalServerError, "No Murmur Store for username".to_string()))?;
 		let target_block = request.current_block + 1;
 
 		let call = RuntimeCall::decode(&mut &request.runtime_call[..])
