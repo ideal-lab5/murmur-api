@@ -1,0 +1,26 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ROCKET_ADDRESS=${ROCKET_ADDRESS}
+      - SALT=${SALT}
+      - EPHEM_MSK=${EPHEM_MSK}
+      - DB_URI=${DB_URI}
+      - DB_NAME=${DB_NAME}
+      - DB_COLLECTION=${DB_COLLECTION}
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
