@@ -44,8 +44,6 @@ async fn authenticate(auth_request: Json<AuthRequest>, cookies: &CookieJar<'_>) 
 	let password = &auth_request.password;
 	let seed = derive_seed(username, password, &env::var("SALT").unwrap());
 
-	let _a = username.clone();
-
 	let username_cookie = Cookie::build(("username", username.clone()))
 		.path("/")
 		.same_site(SameSite::None)
