@@ -42,7 +42,7 @@ pub(crate) struct CreateRequest {
 
 #[derive(Serialize)]
 pub(crate) struct CreateResponse {
-	pub(crate) username: String,
+	pub(crate) username: Vec<u8>,
 	pub(crate) create_data: CreateData,
 }
 
@@ -59,7 +59,7 @@ impl<'r> Responder<'r, 'static> for CreateResponse {
 
 #[derive(Serialize)]
 pub(crate) struct ExecuteResponse {
-	pub(crate) username: String,
+	pub(crate) username: Vec<u8>,
 	pub(crate) proxy_data: ProxyData,
 }
 

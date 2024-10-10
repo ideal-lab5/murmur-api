@@ -92,7 +92,7 @@ async fn create(
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
 		// 4. return the call data
-		Ok(CreateResponse { username: username.to_string(), create_data })
+		Ok(CreateResponse { create_data, username: username.into() })
 	})
 	.await
 }
@@ -120,7 +120,7 @@ async fn execute(
 		let proxy_data = murmur::prepare_execute(seed.into(), target_block, store, &call)
 			.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
-		Ok(ExecuteResponse { username: username.to_string(), proxy_data })
+		Ok(ExecuteResponse { username: username.into(), proxy_data })
 	})
 	.await
 }
