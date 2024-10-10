@@ -15,7 +15,7 @@
  */
 
 #[macro_use]
-extern crate rocket;
+extern crate rocket ;
 
 mod store;
 mod translate;
@@ -87,7 +87,7 @@ async fn create(
 			seed.into(),
 			ephem_msk,
 			schedule,
-			
+
 			round_pubkey_bytes,
 
 		)
