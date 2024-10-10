@@ -42,6 +42,7 @@ pub(crate) struct CreateRequest {
 
 #[derive(Serialize)]
 pub(crate) struct CreateResponse {
+	pub(crate) username: String,
 	pub(crate) create_data: CreateData,
 }
 
