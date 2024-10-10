@@ -1733,7 +1733,7 @@ dependencies = [
 [[package]]
 name = "etf-crypto-primitives"
 version = "0.2.4"
-source = "git+https://github.com/ideal-lab5/etf-sdk/?branch=dev#e2b3615e0936c2cdd1ab8673e15208bef880b040"
+source = "git+https://github.com/ideal-lab5/etf-sdk.git?branch=dev#e2b3615e0936c2cdd1ab8673e15208bef880b040"
 dependencies = [
  "aes-gcm",
  "ark-bls12-377",
@@ -3052,13 +3052,13 @@ dependencies = [
 [[package]]
 name = "murmur-core"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#7365f012414e7937b3472e9ab45fcc83b68838b3"
+source = "git+https://github.com/ideal-lab5/murmur.git#7d5f2b26b1b6a341e65e8e68bc06607cc7008b7e"
 dependencies = [
  "ark-bls12-377",
  "ark-serialize",
  "ark-std",
  "ckb-merkle-mountain-range",
- "etf-crypto-primitives 0.2.4 (git+https://github.com/ideal-lab5/etf-sdk/?branch=dev)",
+ "etf-crypto-primitives 0.2.4 (git+https://github.com/ideal-lab5/etf-sdk.git?branch=dev)",
  "parity-scale-codec",
  "rand_chacha",
  "serde",
@@ -3071,7 +3071,7 @@ dependencies = [
 [[package]]
 name = "murmur-lib"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#7365f012414e7937b3472e9ab45fcc83b68838b3"
+source = "git+https://github.com/ideal-lab5/murmur.git#7d5f2b26b1b6a341e65e8e68bc06607cc7008b7e"
 dependencies = [
  "ark-bls12-377",
  "ark-ff",

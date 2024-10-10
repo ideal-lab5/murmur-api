@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-use murmur::BlockNumber;
-use parity_scale_codec::Encode;
+use murmur::{BlockNumber, CreateData, ProxyData};
 use rocket::http::Status;
 use rocket::response::Responder;
 use rocket::serde::{Deserialize, Serialize};
@@ -42,42 +41,9 @@ pub(crate) struct CreateRequest {
 }
 
 #[derive(Serialize)]
-pub(crate) struct Payload<CallData> {
-	pallet_name: String,
-	call_name: String,
-	call_data: CallData,
-}
-
-// Implement the From trait for Payload to convert from TxPayload
-impl<C, D> From<murmur::TxPayload<C>> for Payload<D>
-where
-	D: for<'a> From<&'a C>,
-{
-	fn from(tx_payload: murmur::TxPayload<C>) -> Self {
-		Payload {
-			pallet_name: tx_payload.pallet_name().to_string(),
-			call_name: tx_payload.call_name().to_string(),
-			call_data: tx_payload.call_data().into(),
-		}
-	}
-}
-
-#[derive(Serialize, Clone)]
-pub(crate) struct Create {
-	root: Vec<u8>,
-	size: u64,
-	name: Vec<u8>,
-}
-
-impl<'a> From<&'a murmur::Create> for Create {
-	fn from(create: &'a murmur::Create) -> Self {
-		Create { root: create.root.clone(), size: create.size, name: create.name.0.clone() }
-	}
-}
-
-#[derive(Serialize)]
 pub(crate) struct CreateResponse {
-	pub(crate) payload: Payload<Create>,
+	pub(crate) username: Vec<u8>,
+	pub(crate) create_data: CreateData,
 }
 
 impl<'r> Responder<'r, 'static> for CreateResponse {
@@ -92,33 +58,9 @@ impl<'r> Responder<'r, 'static> for CreateResponse {
 }
 
 #[derive(Serialize)]
-pub(crate) struct Proxy {
-	pub name: Vec<u8>,
-	pub position: u64,
-	pub hash: Vec<u8>,
-	pub ciphertext: Vec<u8>,
-	pub proof: Vec<Vec<u8>>,
-	pub size: u64,
-	pub call: Vec<u8>,
-}
-
-impl<'a> From<&'a murmur::Proxy> for Proxy {
-	fn from(proxy: &'a murmur::Proxy) -> Self {
-		Proxy {
-			name: proxy.name.0.clone(),
-			position: proxy.position,
-			hash: proxy.hash.clone(),
-			ciphertext: proxy.ciphertext.clone(),
-			proof: proxy.proof.clone(),
-			size: proxy.size,
-			call: proxy.call.as_ref().encode()
-		}
-	}
-}
-
-#[derive(Serialize)]
 pub(crate) struct ExecuteResponse {
-	pub(crate) payload: Payload<Proxy>,
+	pub(crate) username: Vec<u8>,
+	pub(crate) proxy_data: ProxyData,
 }
 
 impl<'r> Responder<'r, 'static> for ExecuteResponse {

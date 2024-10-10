@@ -83,17 +83,16 @@ async fn create(
 		// 2. create mmr
 		let ephem_msk = translate::str_to_bytes(&env::var("EPHEM_MSK").unwrap())
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?; // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
-		let (payload, store) =
-			murmur::create(username.into(), seed.into(), ephem_msk, schedule, round_pubkey_bytes)
-				.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+		let create_data = murmur::create(seed.into(), ephem_msk, schedule, round_pubkey_bytes)
+			.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
 		// 3. add to storage
-		db.write(username.into(), store.clone())
+		db.write(username.into(), create_data.mmr_store.clone())
 			.await
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
 
 		// 4. return the call data
-		Ok(CreateResponse { payload: payload.into() })
+		Ok(CreateResponse { create_data, username: username.into() })
 	})
 	.await
 }
@@ -106,29 +105,22 @@ async fn execute(
 	db: &State<Store>,
 ) -> Result<ExecuteResponse, (Status, String)> {
 	check_cookie(cookies, |username, seed| async {
-		println!("Executing transaction for user");
 		let mmr_option = db
 			.load(username.into())
 			.await
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
-		println!("mmr_option: ");
+
 		let store = mmr_option
 			.ok_or((Status::InternalServerError, format!("No Murmur Store for username")))?;
 		let target_block = request.current_block + 1;
-		println!("target_block: ");
-		let runtime_call = RuntimeCall::decode(&mut &request.runtime_call[..])
+
+		let call = RuntimeCall::decode(&mut &request.runtime_call[..])
 			.map_err(|e| (Status::InternalServerError, e.to_string()))?;
-		println!("runtime_call:");
-		let payload = murmur::prepare_execute(
-			username.into(),
-			seed.into(),
-			target_block,
-			store,
-			runtime_call,
-		)
-		.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
-		println!("payload: ");
-		Ok(ExecuteResponse { payload: payload.into() })
+
+		let proxy_data = murmur::prepare_execute(seed.into(), target_block, store, &call)
+			.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+
+		Ok(ExecuteResponse { username: username.into(), proxy_data })
 	})
 	.await
 }
