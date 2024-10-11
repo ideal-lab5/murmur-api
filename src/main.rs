@@ -81,10 +81,9 @@ async fn create(
 		}
 
 		// 2. create mmr
-		let ephem_msk = translate::str_to_bytes(&env::var("EPHEM_MSK").unwrap())
-			.map_err(|e| (Status::InternalServerError, e.to_string()))?; // TODO: replace with an hkdf? https://github.com/ideal-lab5/murmur/issues/13
-		let create_data = murmur::create(seed.into(), ephem_msk, schedule, round_pubkey_bytes)
-			.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
+		let create_data =
+			murmur::create(seed.into(), request.ephem_msk, schedule, round_pubkey_bytes)
+				.map_err(|e| (Status::InternalServerError, MurmurError(e).to_string()))?;
 
 		// 3. add to storage
 		db.write(username.into(), create_data.mmr_store.clone())
