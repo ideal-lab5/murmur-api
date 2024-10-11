@@ -38,7 +38,6 @@ pub(crate) struct CreateRequest {
 	pub(crate) validity: u32,
 	pub(crate) current_block: BlockNumber,
 	pub(crate) round_pubkey: String,
-	pub(crate) ephem_msk: [u8; 32],
 }
 
 #[derive(Serialize)]
