@@ -8,7 +8,6 @@ services:
     environment:
       - ROCKET_ADDRESS=${ROCKET_ADDRESS}
       - SALT=${SALT}
-      - EPHEM_MSK=${EPHEM_MSK}
       - DB_URI=${DB_URI}
       - DB_NAME=${DB_NAME}
       - DB_COLLECTION=${DB_COLLECTION}

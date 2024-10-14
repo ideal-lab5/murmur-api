@@ -953,9 +953,9 @@ checksum = "c3ac9f8b63eca6fd385229b3675f6cc0dc5c8a5c8a54a59d4f52ffd670d87b0c"
 
 [[package]]
 name = "bytemuck"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94bbb0ad554ad961ddc5da507a12a29b14e4ae5bda06b19f575a3e6079d2e2ae"
+checksum = "8334215b81e418a0a7bdb8ef0849474f40bb10c8b71f1c4ed315cff49f32494d"
 
 [[package]]
 name = "byteorder"
@@ -971,9 +971,9 @@ checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 
 [[package]]
 name = "cc"
-version = "1.1.28"
+version = "1.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e80e3b6a3ab07840e1cae9b0666a63970dc28e8ed5ffbcdacbfc760c281bfc1"
+checksum = "b16803a61b81d9eabb7eae2588776c4c1e584b738ede45fdbb4c972cec1e9945"
 dependencies = [
  "shlex",
 ]
@@ -1733,7 +1733,7 @@ dependencies = [
 [[package]]
 name = "etf-crypto-primitives"
 version = "0.2.4"
-source = "git+https://github.com/ideal-lab5/etf-sdk.git?branch=dev#e2b3615e0936c2cdd1ab8673e15208bef880b040"
+source = "git+https://github.com/ideal-lab5/etf-sdk/?branch=dev#e2b3615e0936c2cdd1ab8673e15208bef880b040"
 dependencies = [
  "aes-gcm",
  "ark-bls12-377",
@@ -2282,6 +2282,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "212ab92002354b4819390025006c897e8140934349e8635c9b077f47b4dcbd20"
 
 [[package]]
+name = "hkdf"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7"
+dependencies = [
+ "hmac 0.12.1",
+]
+
+[[package]]
 name = "hmac"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2626,9 +2635,9 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "js-sys"
-version = "0.3.70"
+version = "0.3.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1868808506b929d7b0cfa8f75951347aa71bb21144b7791bae35d9bccfcfe37a"
+checksum = "6a88f1bda2bd75b0452a14784937d796722fdebfe50df998aeb3f0b7603019a9"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -3052,13 +3061,13 @@ dependencies = [
 [[package]]
 name = "murmur-core"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#7d5f2b26b1b6a341e65e8e68bc06607cc7008b7e"
+source = "git+https://github.com/ideal-lab5/murmur.git#d6bd2510c9dc42fecceb519f8e6d163768e65875"
 dependencies = [
  "ark-bls12-377",
  "ark-serialize",
  "ark-std",
  "ckb-merkle-mountain-range",
- "etf-crypto-primitives 0.2.4 (git+https://github.com/ideal-lab5/etf-sdk.git?branch=dev)",
+ "etf-crypto-primitives 0.2.4 (git+https://github.com/ideal-lab5/etf-sdk/?branch=dev)",
  "parity-scale-codec",
  "rand_chacha",
  "serde",
@@ -3071,7 +3080,7 @@ dependencies = [
 [[package]]
 name = "murmur-lib"
 version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/murmur.git#7d5f2b26b1b6a341e65e8e68bc06607cc7008b7e"
+source = "git+https://github.com/ideal-lab5/murmur.git#d6bd2510c9dc42fecceb519f8e6d163768e65875"
 dependencies = [
  "ark-bls12-377",
  "ark-ff",
@@ -3079,6 +3088,7 @@ dependencies = [
  "ark-std",
  "ckb-merkle-mountain-range",
  "clap",
+ "hkdf",
  "murmur-core",
  "parity-scale-codec",
  "rand_chacha",
@@ -4941,7 +4951,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -5008,7 +5018,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5028,7 +5038,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -5157,7 +5167,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -5189,7 +5199,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "Inflector",
  "expander",
@@ -5227,7 +5237,7 @@ source = "git+https://github.com/ideal-lab5/polkadot-sdk.git?branch=testing#0bd1
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 
 [[package]]
 name = "sp-storage"
@@ -5244,7 +5254,7 @@ dependencies = [
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -5267,7 +5277,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -5339,7 +5349,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#6765bcd8a34bc47b4f8ad0c5c9f00574e3b1b9af"
+source = "git+https://github.com/paritytech/polkadot-sdk#d1c115b6197bf6c45d5640594f0432e6c2781a4f"
 dependencies = [
  "anyhow",
  "impl-trait-for-tuples",
@@ -6261,9 +6271,9 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.93"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a82edfc16a6c469f5f44dc7b571814045d60404b55a0ee849f9bcfa2e63dd9b5"
+checksum = "128d1e363af62632b8eb57219c8fd7877144af57558fb2ef0368d0087bddeb2e"
 dependencies = [
  "cfg-if",
  "once_cell",
@@ -6272,9 +6282,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-backend"
-version = "0.2.93"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9de396da306523044d3302746f1208fa71d7532227f15e347e2d93e4145dd77b"
+checksum = "cb6dd4d3ca0ddffd1dd1c9c04f94b868c37ff5fac97c30b97cff2d74fce3a358"
 dependencies = [
  "bumpalo",
  "log",
@@ -6287,9 +6297,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.93"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "585c4c91a46b072c92e908d99cb1dcdf95c5218eeb6f3bf1efa991ee7a68cccf"
+checksum = "e79384be7f8f5a9dd5d7167216f022090cf1f9ec128e6e6a482a2cb5c5422c56"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -6297,9 +6307,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.93"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afc340c74d9005395cf9dd098506f7f44e38f2b4a21c6aaacf9a105ea5e1e836"
+checksum = "26c6ab57572f7a24a4985830b120de1594465e5d500f24afe89e16b4e833ef68"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6310,9 +6320,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.93"
+version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c62a0a307cb4a311d3a07867860911ca130c3494e8c2719593806c08bc5d0484"
+checksum = "65fc09f10666a9f147042251e0dda9c18f166ff7de300607007e96bdebc1068d"
 
 [[package]]
 name = "wasmi"

@@ -21,17 +21,3 @@ pub(crate) fn pubkey_to_bytes(pubkey: &str) -> Result<Vec<u8>, String> {
 		hex::decode(pubkey).map_err(|_| format!("Wrong input `{:?}`", pubkey))?;
 	Ok(round_pubkey_bytes)
 }
-
-/// Convert a string of comma-separated integers to a fixed-size array of bytes
-pub(crate) fn str_to_bytes(input: &str) -> Result<[u8; 32], &str> {
-	let vec: Vec<u8> = input
-		.split(',')
-		.map(|s| {
-			s.trim()
-				.parse()
-				.unwrap_or_else(|_| panic!("Invalid integer in input {}", input))
-		})
-		.collect();
-	let sized: [u8; 32] = vec.try_into().map_err(|_| "Vector length is not 32")?;
-	Ok(sized)
-}
