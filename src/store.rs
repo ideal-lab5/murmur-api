@@ -25,8 +25,7 @@ use rocket_db_pools::mongodb::{
 	bson::doc, error::Error as DbError, options::UpdateOptions, results::UpdateResult, Client,
 	Collection,
 };
-use std::env;
-use std::fmt::Display;
+use std::{env, fmt::Display};
 
 #[derive(Serialize, Deserialize)]
 pub struct MurmurDbObject {

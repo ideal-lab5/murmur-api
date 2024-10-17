@@ -18,7 +18,7 @@ jobs:
       - name: Install Rust
         run: rustup update stable
       - name: Check formatting
-        run: cargo fmt -- --check
+        run: cargo +nightly fmt -- --check
       - name: Run clippy
         run: cargo clippy
       - name: Build
