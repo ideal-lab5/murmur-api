@@ -15,10 +15,12 @@
  */
 
 use murmur::{BlockNumber, CreateData, ProxyData};
-use rocket::http::Status;
-use rocket::response::Responder;
-use rocket::serde::{Deserialize, Serialize};
-use rocket::{Request, Response};
+use rocket::{
+	http::Status,
+	response::Responder,
+	serde::{Deserialize, Serialize},
+	Request, Response,
+};
 use std::io::Cursor;
 
 #[derive(Deserialize)]
